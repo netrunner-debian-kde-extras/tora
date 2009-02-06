@@ -3,7 +3,7 @@ Section: misc
 Priority: optional
 Maintainer: Debian KDE Extras Team <pkg-kde-extras@lists.alioth.debian.org>
 Uploaders: Michael Meskes <meskes@debian.org>
-Build-Depends: debhelper (>= 5), kdelibs5-dev, kdebase-bin, dpatch, libqscintilla2-dev, cdbs
+Build-Depends: debhelper (>= 5), kdelibs5-dev, kdebase-bin, dpatch, libqscintilla2-dev, cdbs, libpq-dev
 Standards-Version: 3.8.0
 
 Package: tora
