@@ -1,3 +1,9 @@
+tora (2.0.0-3) UNRELEASED; urgency=low
+
+  * Cleaned up packaging a little bit.
+
+ -- Michael Meskes <meskes@debian.org>  Sat, 07 Feb 2009 18:59:01 +0100
+
 tora (2.0.0-2) experimental; urgency=low
 
   * Added build dependency on libpq-dev to get full PostgreSQL support.
