@@ -1,9 +1,11 @@
-tora (2.0.0-3) UNRELEASED; urgency=low
+tora (2.0.0-3) unstable; urgency=low
 
   * Cleaned up packaging a little bit.
   * Added homepage information to control file.
+  * Bumped Standards-Version to 3.8.1.
+  * Released to unstable.
 
- -- Michael Meskes <meskes@debian.org>  Sat, 07 Feb 2009 18:59:01 +0100
+ -- Michael Meskes <meskes@debian.org>  Tue, 07 Apr 2009 13:16:05 +0200
 
 tora (2.0.0-2) experimental; urgency=low
 
