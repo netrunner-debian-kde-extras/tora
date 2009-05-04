@@ -1,0 +1,51 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## 01_missing_includes.dpatch by Michael Meskes <meskes@debian.org>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: Some missing include directives
+
+@DPATCH@
+
+--- tora-2.0.0/src/toqvalue.cpp~	2009-04-29 17:02:16.000000000 +0000
++++ tora-2.0.0/src/toqvalue.cpp	2009-04-29 17:02:23.000000000 +0000
+@@ -47,6 +47,8 @@
+ #include <QVariant>
+ #include <QApplication>
+ 
++#include <cstdio>
++
+ static int NumberFormat;
+ static int NumberDecimals;
+ 
+--- tora-2.0.0/src/todebug.cpp~	2009-04-29 17:04:00.000000000 +0000
++++ tora-2.0.0/src/todebug.cpp	2009-04-29 17:04:11.000000000 +0000
+@@ -58,6 +58,7 @@
+ #include "totool.h"
+ #include "tocodemodel.h"
+ 
++#include <cstdio>
+ #include <stack>
+ 
+ #include <qcheckbox.h>
+--- tora-2.0.0/src/tomodeleditor.cpp~	2009-04-29 17:09:30.000000000 +0000
++++ tora-2.0.0/src/tomodeleditor.cpp	2009-04-29 17:09:42.000000000 +0000
+@@ -59,6 +59,8 @@
+ #include <QSettings>
+ #include <QAbstractItemModel>
+ 
++#include <cstdio>
++
+ #include "icons/commit.xpm"
+ #include "icons/copy.xpm"
+ #include "icons/cut.xpm"
+--- tora-2.0.0/src/toresultview.cpp~	2009-04-29 17:17:49.000000000 +0000
++++ tora-2.0.0/src/toresultview.cpp	2009-04-29 17:18:01.000000000 +0000
+@@ -54,6 +54,8 @@
+ #include "totool.h"
+ #include "toresultlistformat.h"
+ 
++#include <cstdio>
++
+ #include <qapplication.h>
+ #include <qclipboard.h>
+ #include <qcombobox.h>

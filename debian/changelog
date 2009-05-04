@@ -1,3 +1,9 @@
+tora (2.0.0-4) unstable; urgency=low
+
+  * Added patch to add missing include directives, closes: #526166
+
+ -- Michael Meskes <meskes@debian.org>  Mon, 04 May 2009 16:12:37 +0200
+
 tora (2.0.0-3) unstable; urgency=low
 
   * Cleaned up packaging a little bit.
