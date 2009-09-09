@@ -58,7 +58,6 @@
 #include "totool.h"
 #include "tocodemodel.h"
 
-#include <cstdio>
 #include <stack>
 
 #include <qcheckbox.h>
