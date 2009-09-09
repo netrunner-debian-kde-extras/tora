@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -75,7 +75,7 @@
 #include <QColor>
 #include <QFileDialog>
 #include <QDockWidget>
-#include <QTextStream>
+#include <QTextCodec>
 #include <QStyleFactory>
 #include <QStyle>
 #include <QDir>
@@ -482,6 +482,9 @@ QToolBar *toAllocBar(QWidget *parent, const QString &str)
     else
         tool = new QToolBar(parent);
 
+    // Enforce smaller toolbars on mac
+    tool->setIconSize(QSize(16, 16));
+
     tool->setSizePolicy(QSizePolicy(QSizePolicy::Preferred,
                                     QSizePolicy::Fixed));
     tool->setFocusPolicy(Qt::NoFocus);
@@ -629,7 +632,7 @@ int toSizeDecode(const QString &str)
 //     return str;
 // }
 
-QString toReadFile(const QString &filename)
+QByteArray toReadFileB(const QString &filename)
 {
     QString expanded = toExpandFile(filename);
     // for some reason qrc:/ urls fail with QFile but are required for
@@ -641,8 +644,13 @@ QString toReadFile(const QString &filename)
     if (!file.open(QIODevice::ReadOnly))
         throw QT_TRANSLATE_NOOP("toReadFile", "Couldn't open file %1.").arg(expanded);
 
-    QTextStream in(&file);
-    return in.readAll();
+    return file.readAll();
+}
+
+QString toReadFile(const QString &filename)
+{
+    QTextCodec *codec = QTextCodec::codecForLocale();
+    return codec->toUnicode(toReadFileB(filename));
 }
 
 QString toExpandFile(const QString &file)
@@ -677,6 +685,7 @@ QString toExpandFile(const QString &file)
     return ret;
 }
 
+// saves a QByteArray (binary data) to filename
 bool toWriteFile(const QString &filename, const QByteArray &data)
 {
     QString expanded = toExpandFile(filename);
@@ -704,9 +713,11 @@ bool toWriteFile(const QString &filename, const QByteArray &data)
     return true;
 }
 
+// saves a QString to filename,
+// encoded according to the current locale settings
 bool toWriteFile(const QString &filename, const QString &data)
 {
-    return toWriteFile(filename, data.toUtf8());
+    return toWriteFile(filename, data.toLocal8Bit());
 }
 
 bool toCompareLists(QStringList &lsta, QStringList &lstb, int len)

@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -98,6 +98,8 @@ class toWorksheet : public toToolWidget
     toResultBar       *WaitChart;
     toResultBar       *IOChart;
     toListView        *Logging;
+    //! Re-set EditSplitter sizes with settings.
+    QList<int>        EditSplitterSizes;
     QSplitter         *EditSplitter;
     QSplitter         *ResourceSplitter;
     toResultTableView *LongOps;
@@ -105,6 +107,7 @@ class toWorksheet : public toToolWidget
     toTreeWidgetItem  *LastLogItem;
     QWidget           *StatTab;
     bool               TryStrip;
+    //! Used only for DESC/DESCRIBE sql statements
     toResultCols      *Columns;
     QComboBox         *Refresh;
     QLabel            *Started;

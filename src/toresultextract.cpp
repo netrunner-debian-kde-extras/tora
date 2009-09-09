@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -48,12 +48,19 @@
 #include "toresultextract.h"
 #include "tosql.h"
 #include "totool.h"
+#include "tomain.h"
 
 
 toResultExtract::toResultExtract(bool prompt, QWidget *parent, const char *name)
         : toWorksheetWidget(parent, name, toCurrentConnection(parent))
 {
     Prompt = prompt;
+}
+
+toResultExtract::toResultExtract(QWidget * parent)
+    : toWorksheetWidget(parent, "toResultExtract", toMainWidget()->currentConnection())
+{
+    Prompt = false;
 }
 
 static toSQL SQLObjectTypeMySQL("toResultExtract:ObjectType",

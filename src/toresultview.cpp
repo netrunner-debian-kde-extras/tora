@@ -44,15 +44,17 @@
 #include "toconf.h"
 #include "tolistviewformatter.h"
 #include "tolistviewformatterfactory.h"
-#include "tolistviewformatteridentifier.h"
+//#include "tolistviewformatteridentifier.h"
 #include "tomain.h"
 #include "tomemoeditor.h"
 #include "toparamget.h"
 #include "toresultview.h"
-#include "tosearchreplace.h"
 #include "tosql.h"
 #include "totool.h"
 #include "toresultlistformat.h"
+#include "tosearchreplace.h"
+
+#include <cstdio>
 
 #include <qapplication.h>
 #include <qclipboard.h>
@@ -75,6 +77,7 @@
 #include <QAction>
 #include <QMimeData>
 #include <QColorGroup>
+#include <QProgressDialog>
 
 static int MaxColDisp;
 static bool Gridlines;
@@ -467,7 +470,6 @@ toListView::toListView(QWidget *parent, const char *name, Qt::WFlags f)
                      false, false, false,
                      true, true, false)
 {
-    FirstSearch = false;
     setTreeStepSize(15);
     setSelectionMode(Extended);
     setAllColumnsShowFocus(true);
@@ -796,11 +798,11 @@ void toListView::displayMenu(const QPoint &pos)
         Menu->addSeparator();
 
         copyAct = Menu->addAction(tr("&Copy field"));
-        if (selectionMode() == Multi || selectionMode() == Extended)
-        {
-            copySelAct  = Menu->addAction(tr("Copy selection"));
-            copyHeadAct = Menu->addAction(tr("Copy selection with header"));
-        }
+//        if (selectionMode() == Multi || selectionMode() == Extended)
+//        {
+//            copySelAct  = Menu->addAction(tr("Copy selection"));
+//            copyHeadAct = Menu->addAction(tr("Copy selection with header"));
+//        }
         copyTransAct = Menu->addAction(tr("Copy transposed"));
         if (selectionMode() == Multi || selectionMode() == Extended)
         {
@@ -844,11 +846,14 @@ void toListView::menuCallback(QAction *action)
         QClipboard *clip = qApp->clipboard();
         clip->setText(menuText());
     }
-    else if (action == copySelAct)
+    else if (action == copyFormatAct)
     {
         try
         {
-            QString str = exportAsText(false, true);
+            toResultListFormat exp(this, toResultListFormat::TypeCopy);
+            if (!exp.exec())
+                return;
+            QString str = exportAsText(exp.exportSettings());
             if (!str.isNull())
             {
                 QClipboard *clip = qApp->clipboard();
@@ -865,21 +870,6 @@ void toListView::menuCallback(QAction *action)
         setColumnAlignment(MenuColumn, Qt::AlignCenter);
     else if (action == rightAct)
         setColumnAlignment(MenuColumn, Qt::AlignRight);
-    else if (action == copyHeadAct)
-    {
-        try
-        {
-            QString str = exportAsText(true, true);
-            if (!str.isNull())
-            {
-                QClipboard *clip = qApp->clipboard();
-                QMimeData drag;
-                drag.setHtml(str);
-                clip->setMimeData(&drag);
-            }
-        }
-        TOCATCH;
-    }
     else if (action == selectAllAct)
         selectAll(true);
 //     else if(act ==
@@ -916,14 +906,21 @@ void toListView::focusInEvent(QFocusEvent *e)
     toTreeWidget::focusInEvent(e);
 }
 
-bool toListView::searchNext(toSearchReplace *search)
+bool toListView::searchNext(const QString & text)
 {
     toTreeWidgetItem *item = currentItem();
 
-    bool first = FirstSearch;
-    FirstSearch = false;
+    bool first = true;
 
-    for (toTreeWidgetItem *next = NULL;item;item = next)
+    bool cs = toMainWidget()->searchDialog()->caseSensitive();
+    bool ww = toMainWidget()->searchDialog()->wholeWords();
+    bool rx = toMainWidget()->searchDialog()->searchMode() == Search::SearchRegexp;
+
+    QString realSearch(text);
+    if (!cs)
+        realSearch = realSearch.toUpper();
+
+    for (toTreeWidgetItem *next = NULL; item; item = next)
     {
         if (!first)
             first = true;
@@ -931,9 +928,6 @@ bool toListView::searchNext(toSearchReplace *search)
         {
             for (int i = 0;i < columns();i++)
             {
-                int pos = 0;
-                int endPos = 0;
-
                 toResultViewItem *resItem = dynamic_cast<toResultViewItem *>(item);
                 toResultViewCheck *chkItem = dynamic_cast<toResultViewCheck *>(item);
                 QString txt;
@@ -944,7 +938,15 @@ bool toListView::searchNext(toSearchReplace *search)
                 else if (item)
                     txt = item->text(i);
 
-                if (search->findString(item->text(0), pos, endPos))
+                if (!cs)
+                    txt = txt.toUpper();
+
+                if (rx && txt.contains(QRegExp(text)))
+                {
+                    setCurrentItem(item);
+                    return true;
+                }
+                else if ((ww && txt == realSearch) || (!ww && txt.contains(realSearch)))
                 {
                     setCurrentItem(item);
                     return true;
@@ -969,6 +971,12 @@ bool toListView::searchNext(toSearchReplace *search)
         }
     }
     return false;
+}
+
+bool toListView::searchPrevious(const QString & text)
+{
+    // TODO/FIXME: real backward searching
+    return searchNext(text);
 }
 
 toListView *toListView::copyTransposed(void)
@@ -1035,34 +1043,18 @@ bool toListView::editSave(bool)
 {
     try
     {
-        QString delimiter;
-        QString separator;
-        int type = exportType(separator, delimiter);
-
-        QString nam;
-        switch (type)
-        {
-        case - 1:
+        toResultListFormat dia(this, toResultListFormat::TypeExport);
+        if (!dia.exec())
             return false;
-        default:
-            nam = "*.txt";
-            break;
-        case 2:
-            nam = "*.csv";
-            break;
-        case 3:
-            nam = "*.html";
-            break;
-        case 4:
-            nam = "*.sql";
-            break;
-        }
 
-        QString filename = toSaveFilename(QString::null, nam, this);
+        toExportSettings settings = dia.exportSettings();
+
+        QString filename = toSaveFilename(QString::null, settings.extension, this);
         if (filename.isEmpty())
             return false;
-
-        return toWriteFile(filename, exportAsText(true, false, type, separator, delimiter));
+        std::auto_ptr<toListViewFormatter> pFormatter(
+                toListViewFormatterFactory::Instance().CreateObject(settings.type));
+        return toWriteFile(filename, exportAsText(settings));
     }
     TOCATCH
     return false;
@@ -1070,30 +1062,28 @@ bool toListView::editSave(bool)
 
 void toListView::addMenues(QMenu *) {}
 
-bool toListView::searchCanReplace(bool)
-{
-    return false;
-}
-
-int toListView::exportType(QString &separator, QString &delimiter)
+#if 0
+int toListView::exportType(QString &separator, QString &delimiter,
+                           bool &includeHeader, bool &onlySelection)
 {
     toResultListFormat format(this, NULL);
     if (!format.exec())
         return -1;
 
-    format.saveDefault();
-
     separator = format.Separator->text();
     delimiter = format.Delimiter->text();
+    includeHeader = format.IncludeHeaders->isChecked();
+    onlySelection = format.OnlySelection->isChecked();
 
     return format.Format->currentIndex();
 
 }
+#endif
 
 
-QString toListView::exportAsText(bool tincludeHeader, bool tonlySelection, int type,
-                                 const QString &tsep, const QString &tdel)
+QString toListView::exportAsText(toExportSettings settings)
 {
+#if 0
     QString result;
 
     includeHeader = tincludeHeader;
@@ -1102,7 +1092,7 @@ QString toListView::exportAsText(bool tincludeHeader, bool tonlySelection, int t
     del = tdel;
 
     if (type < 0)
-        type = exportType(sep, del);
+        type = exportType(sep, del, includeHeader, onlySelection);
     if (type < 0)
         return QString::null;
 
@@ -1110,6 +1100,27 @@ QString toListView::exportAsText(bool tincludeHeader, bool tonlySelection, int t
     result =  pFormatter->getFormattedString(*this);
 
     return result;
+#endif
+    if (settings.requireSelection())
+        settings.selected = selectedIndexes();
+
+    if (settings.rowsExport == toExportSettings::RowsAll)
+    {
+        QProgressDialog progress("Fetching All Data...", "Abort", 0, 2, this);
+        progress.setWindowModality(Qt::WindowModal);
+        while (model()->canFetchMore(currentIndex()))
+        {
+            if (progress.wasCanceled())
+                break;
+            model()->fetchMore(currentIndex());
+            progress.setValue(progress.value() == 0 ? 1 : 0);
+        }
+        progress.setValue(2);
+    }
+
+    std::auto_ptr<toListViewFormatter> pFormatter(
+        toListViewFormatterFactory::Instance().CreateObject(settings.type));
+    return pFormatter->getFormattedString(settings, model());
 }
 
 void toListView::exportData(std::map<QString, QString> &ret, const QString &prefix)

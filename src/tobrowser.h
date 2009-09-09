@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -66,34 +66,122 @@ class toMySQLUserAccess;
 class toResultTableView;
 class QMdiSubWindow;
 
+class toBrowserTableWidget;
+class toBrowserViewWidget;
+class toBrowserIndexWidget;
+class toBrowserSequenceWidget;
+class toBrowserSynonymWidget;
+class toBrowserCodeWidget;
+class toBrowserTriggerWidget;
+class toBrowserDBLinksWidget;
+class toBrowserAccessWidget;
+class toBrowserBaseWidget;
+class toBrowserSchemaBase;
+class toBrowserSchemaCodeBrowser;
+class toBrowserSchemaTableView;
 
+
+/*! \brief Main GUI fo Schema Browser.
+toBrowser holds the GUI stuff for schema browsing. It contains
+some slots/actions related to the DB object manipulations - mainly
+the "mass" actions available for multiple objects (e.g. deleting
+all selected tables etc.). Actions related to the one object (e.g.
+test the DB link) are moved to toBrowserBaseWidget inherited
+classes.
+
+The main widget of toBrowser is the tab widget m_mainTab. Every its
+tab widget is based on QSplitter (\see tableSplitter, etc.).
+This QSplitter has two main children - the "object browser" (usually
+the toResultTableView - dblinkView etc. - or QWidget with toolbar
+and toResultTableView) and the "browser" - the toBrowserBaseWidget
+inherited object.
+QSplitters are keys in the m_browsersMap and m_objectsMap implicitly
+shared QMap structures to allow easy and quick access with
+QTabWidget::currentWidget() casted to QSplitter (\see e.g.
+mainTab_currentChanged() as an example of data transfer to subwidgets).
+
+Availability of the tabs for given connection is checked in
+changeConnection() method. Some tabs are available only for
+some DBMS, depending on features. The tab is hidden when there
+is no available fature in DBMS.
+
+Hidden tabs, resp. widgets, are not deleted. All is still available
+in QMap (\see m_objectsMap, m_browsersMap) structures waiting for
+resfresh.
+*/
 class toBrowser : public toToolWidget
 {
     Q_OBJECT;
 
     toResultCombo *Schema;
-    toTabWidget   *TopTab;
+    QTabWidget   *m_mainTab;
     QMenu         *ToolMenu;
 
-    QString            SecondText;
-    toResultTableView *FirstTab;
-    toResult          *SecondTab;
+    QSplitter * tableSplitter;
+    toBrowserSchemaTableView *tableView;
+    toBrowserTableWidget * tableBrowserWidget;
+
+    QSplitter * viewSplitter;
+    toBrowserSchemaTableView * viewView;
+    toBrowserViewWidget * viewBrowserWidget;
+
+    QSplitter * indexSplitter;
+    toBrowserSchemaTableView * indexView;
+    toBrowserIndexWidget * indexBrowserWidget;
+
+    QSplitter * sequenceSplitter;
+    toBrowserSchemaTableView * sequenceView;
+    toBrowserSequenceWidget * sequenceBrowserWidget;
+
+    QSplitter * synonymSplitter;
+    toBrowserSchemaTableView * synonymView;
+    toBrowserSynonymWidget * synonymBrowserWidget;
+
+    QSplitter * codeSplitter;
+    toBrowserSchemaCodeBrowser * codeView;
+    toBrowserCodeWidget * codeBrowserWidget;
+
+    QSplitter * triggerSplitter;
+    toBrowserSchemaTableView * triggerView;
+    toBrowserTriggerWidget * triggerBrowserWidget;
+
+    QSplitter * dblinkSplitter;
+    toBrowserSchemaTableView * dblinkView;
+    toBrowserDBLinksWidget * dblinkBrowserWidget;
+
+    QSplitter * accessSplitter;
+    toBrowserSchemaTableView * accessView;
+    toBrowserAccessWidget * accessBrowserWidget;
+
+    QMap<QSplitter*,toBrowserSchemaBase*> m_objectsMap;
+    QMap<QSplitter*,toBrowserBaseWidget*> m_browsersMap;
+
     toBrowserFilter   *Filter;
-    QWidget           *CurrentTop;
 
-    toResultData *ViewContent;
-    toResultData *TableContent;
-    toResultData *AccessContent;
-
-    std::map<QString, toResultTableView *> Map;
-    std::map<QString, toResult *> SecondMap;
     void setNewFilter(toBrowserFilter *filter);
 
     QString schema(void);
-    void enableDisableConstraints(const QString &);
-    void dropSomething(const QString &, const QString &);
 
-    QModelIndex selectedItem(int col = 1);
+    /*! \brief A wrapper method to drop any object from DB.
+    \param type a uppercase string with e.g. 'TABLE', 'INDEX', etc.
+                Only objects supported by toExtract can be dropped.
+    \param what a object name to drop.
+    */
+    void dropSomething(const QString & type, const QString & what);
+
+    /*! \brief Get text from the active "object browser" (toResultTableView).
+    \see m_objectsMap.
+    \param col a column name. It's 1 by default
+    */
+    QString currentItemText(int col = 1);
+
+    /*! \brief Add a page to the m_mainTab widget;
+    \see changeConnection().
+    \param page a QSplitter main widget (tableSplitter etc.)
+    \param label text to display as a tab title
+    \param enable true when it should be visible. False on missing feature.
+    */
+    void addTab(QSplitter * page, const QString & label, bool enable);
 
     QAction *refreshAct;
     QAction *FilterButton;
@@ -102,6 +190,8 @@ class toBrowser : public toToolWidget
     QAction *modTableAct;
     QAction *modConstraintAct;
     QAction *modIndexAct;
+    QAction *addIndexesAct;
+    QAction *dropIndexesAct;
     QAction *dropTableAct;
     QAction *enableConstraintAct;
     QAction *disableConstraintAct;
@@ -127,17 +217,12 @@ public:
 
 public slots:
     void refresh(void);
-    void updateTabs(void);
     void changeSchema(int);
-    void changeTab(QWidget *tab);
-    void changeSecond(void);
-    void changeSecondTab(QWidget *tab);
     void changeItem();
+    void changeItem(const QModelIndex &);
     void clearFilter(void);
     void defineFilter(void);
     void windowActivated(QMdiSubWindow *widget);
-    void firstDone(void);
-    void focusObject(void);
 
     void modifyTable(void);
     void addTable(void);
@@ -152,18 +237,12 @@ public slots:
     void checkTable(void);
     void optimizeTable(void);
     void analyzeTable(void);
-    void flushPrivs(void);
 
     void dropIndex(void);
-#if 0
-    void fixIndexCols(void);
-#endif
 
     void changeConnection(void);
     void enableConstraints(void);
     void disableConstraints(void);
-
-    void testDBLink(void);
 
     void displayIndexMenu(QMenu *menu);
     void displayTableMenu(QMenu *menu);
@@ -171,62 +250,66 @@ public slots:
     void addUser(void);
     void dropUser(void);
 
+private slots:
+    //! \brief Handle main tabwidget and its tabs switch
+    void mainTab_currentChanged(int);
+
 protected:
     virtual void closeEvent(QCloseEvent *);
 };
 
-class toBrowseTemplate : public QObject, public toTemplateProvider
-{
-    Q_OBJECT;
+// class toBrowseTemplate : public QObject, public toTemplateProvider
+// {
+//     Q_OBJECT;
+// 
+//     QToolButton                 *FilterButton;
+//     toBrowserFilter             *Filter;
+//     std::list<toTemplateItem *>  Parents;
+//     bool                         Registered;
+// 
+// public:
+//     toBrowseTemplate(void)
+//             : QObject(NULL), toTemplateProvider("Browser")
+//     {
+//         Registered = false;
+//         Filter = NULL;
+//     }
+// 
+//     virtual void insertItems(toTreeWidget *parent, QToolBar *toolbar);
+//     virtual void removeItem(toTreeWidgetItem *item);
+//     toBrowserFilter *filter(void)
+//     {
+//         return Filter;
+//     }
+//     virtual void exportData(std::map<QString, QString> &data,
+//                             const QString &prefix);
+//     virtual void importData(std::map<QString, QString> &data,
+//                             const QString &prefix);
+// 
+// public slots:
+//     void addDatabase(const QString &);
+//     void removeDatabase(const QString &);
+//     void defineFilter(void);
+//     void clearFilter(void);
+// };
 
-    QToolButton                 *FilterButton;
-    toBrowserFilter             *Filter;
-    std::list<toTemplateItem *>  Parents;
-    bool                         Registered;
 
-public:
-    toBrowseTemplate(void)
-            : QObject(NULL), toTemplateProvider("Browser")
-    {
-        Registered = false;
-        Filter = NULL;
-    }
-
-    virtual void insertItems(toTreeWidget *parent, QToolBar *toolbar);
-    virtual void removeItem(toTreeWidgetItem *item);
-    toBrowserFilter *filter(void)
-    {
-        return Filter;
-    }
-    virtual void exportData(std::map<QString, QString> &data,
-                            const QString &prefix);
-    virtual void importData(std::map<QString, QString> &data,
-                            const QString &prefix);
-
-public slots:
-    void addDatabase(const QString &);
-    void removeDatabase(const QString &);
-    void defineFilter(void);
-    void clearFilter(void);
-};
-
-
-class toBrowseButton : public QToolButton
-{
-    Q_OBJECT;
-
-public:
-    toBrowseButton(const QIcon &iconSet,
-                   const QString &textLabel,
-                   const QString & grouptext,
-                   QObject * receiver,
-                   const char * slot,
-                   QToolBar * parent,
-                   const char * name = 0);
-
-private slots:
-    void connectionChanged(void);
-};
+// class toBrowseButton : public QToolButton
+// {
+//     Q_OBJECT;
+// 
+// public:
+//     toBrowseButton(const QIcon &iconSet,
+//                    const QString &textLabel,
+//                    const QString & grouptext,
+//                    QObject * receiver,
+//                    const char * slot,
+//                    QToolBar * parent,
+//                    const char * name = 0);
+// 
+// private slots:
+//     void connectionChanged(void);
+// };
 
 class toBrowserTool : public toTool
 {

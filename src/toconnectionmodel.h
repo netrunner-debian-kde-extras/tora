@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -58,10 +58,12 @@ class toConnectionModel : public QAbstractTableModel
     public:
         toConnectionModel();
 
+        //! \brief Pull connections from QSettings
+        void readConfig();
         //! \brief Set the m_data and update all connected views.
         void setupData(QMap<int,toConnectionOptions> list);
         void append(int ix, toConnectionOptions conn);
-//         bool removeRow(int row, const QModelIndex & parent = QModelIndex());
+        bool removeRow(int row, const QModelIndex & parent = QModelIndex());
         //! \brief Bring m_data back to caller.
         QMap<int,toConnectionOptions> availableConnections() { return m_data; };
         toConnectionOptions availableConnection(int ix) { return m_data[ix]; };

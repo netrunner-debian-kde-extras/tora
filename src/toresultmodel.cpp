@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -191,7 +191,15 @@ void toResultModel::readData()
 
                 // need to reset view(s) since we have to poll for data
                 reset();
-                emit firstResult(tr("Statement executed"), false);
+                if(Query && Query->rowsProcessed() > 0) {
+                    emit firstResult(QString::number(Query->rowsProcessed()) +
+                                     (Query->rowsProcessed() == 1 ?
+                                          tr(" row processed") :
+                                          tr(" rows processed")),
+                                     false);
+                }
+                else
+                    emit firstResult(tr("Statement executed"), false);
             }
         }
 
@@ -622,10 +630,13 @@ void toResultModel::readHeaders()
 
         d.nullAllowed = (*i).Null;
 
+        // AlignTop is used here to prevent Vert. centering of
+        // data if there are more rows in the cell (CLOB etc.).
+        // AlignVCenter makes it unreadable in this case. -- Petr Vanek
         if ((*i).AlignRight)
-            d.align = Qt::AlignRight | Qt::AlignVCenter;
+            d.align = Qt::AlignRight | Qt::AlignTop; //Qt::AlignVCenter;
         else
-            d.align = Qt::AlignLeft | Qt::AlignVCenter;
+            d.align = Qt::AlignLeft | Qt::AlignTop; //Qt::AlignVCenter;
 
         Headers.append(d);
     }

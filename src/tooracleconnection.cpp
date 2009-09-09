@@ -75,7 +75,8 @@
 #if 0 /* OTL tracing */
 #define OTL_TRACE_LEVEL 0xff
 #define OTL_TRACE_STREAM cerr
-#include <iostream.h>
+#include <iostream>
+using namespace std;
 #endif
 
 #include "otlv4.h"
@@ -177,19 +178,7 @@ static void ThrowException(const otl_exception &exc)
 class toOracleProvider : public toConnectionProvider
 {
 public:
-class connectionDeleter : public toTask
-    {
-        otl_connect *Connection;
-    public:
-        connectionDeleter(otl_connect *connect)
-                : Connection(connect)
-        { }
-        virtual void run(void)
-        {
-            delete Connection;
-        }
-    };
-class oracleSub : public toConnectionSub
+    class oracleSub : public toConnectionSub
     {
     public:
         otl_connect *Connection;
@@ -199,8 +188,13 @@ class oracleSub : public toConnectionSub
         }
         ~oracleSub()
         {
-            toThread *thread = new toThread(new connectionDeleter(Connection));
-            thread->start();
+            try {
+                delete Connection;
+            }
+            catch(...) {
+            }
+
+            Connection = 0;
         }
         virtual void cancel(void)
         {
@@ -438,6 +432,8 @@ class oracleQuery : public toQuery::queryImpl
                     if(conn)
                         conn->throwExtendedException(query()->connection(), exc);
                 }
+
+                return true;
             }
         }
         virtual int rowsProcessed(void)
@@ -1389,6 +1385,7 @@ toOracleSetting::toOracleSetting(QWidget *parent)
     ExplainPlan->setText(toConfigurationSingle::Instance().planTable());
     OpenCursors->setValue(toConfigurationSingle::Instance().openCursors());
     KeepPlans->setChecked(toConfigurationSingle::Instance().keepPlans());
+    VsqlPlans->setChecked(toConfigurationSingle::Instance().vsqlPlans());
     int len = toConfigurationSingle::Instance().maxLong();
     if (len >= 0)
     {
@@ -1410,6 +1407,7 @@ toOracleSetting::toOracleSetting(QWidget *parent)
 void toOracleSetting::saveSetting()
 {
     toConfigurationSingle::Instance().setKeepPlans(KeepPlans->isChecked());
+    toConfigurationSingle::Instance().setVsqlPlans(VsqlPlans->isChecked());
     toConfigurationSingle::Instance().setDateFormat(DefaultDate->text());
 
     // try to change NLS for already running sessions

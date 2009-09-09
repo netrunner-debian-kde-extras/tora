@@ -53,24 +53,26 @@ FIND_LIBRARY(
     NAMES libclntsh clntsh oci
     PATHS ${ORACLE_LIB_LOCATION}
 )
-FIND_LIBRARY(
-    ORACLE_LIBRARY_LNNZ
-    NAMES libnnz10 nnz10 libnnz11 nnz11 ociw32
-    PATHS ${ORACLE_LIB_LOCATION}
-)
+#FIND_LIBRARY(
+#    ORACLE_LIBRARY_LNNZ
+#    NAMES libnnz10 nnz10 libnnz11 nnz11 ociw32
+#    PATHS ${ORACLE_LIB_LOCATION}
+#)
 
 SET (ORACLE_LIBRARY ${ORACLE_LIBRARY_OCCI} ${ORACLE_LIBRARY_CLNTSH} ${ORACLE_LIBRARY_LNNZ})
 
-IF (ORACLE_LIBRARY)
+IF (ORACLE_LIBRARY AND ORACLE_INCLUDES)
     SET(ORACLE_LIBRARIES ${ORACLE_LIBRARY})
     SET(ORACLE_FOUND "YES")
-ENDIF (ORACLE_LIBRARY)
+ENDIF (ORACLE_LIBRARY AND ORACLE_INCLUDES)
 
 
 # guess OCI version
 IF (NOT DEFINED ORACLE_OCI_VERSION AND UNIX)
     FIND_PROGRAM(AWK awk)
-    SET (sqlplus_version "${ORACLE_HOME}/bin/sqlplus -version | ${AWK} '/Release/ {print $3}'")
+    FIND_PROGRAM(SQLPLUS sqlplus PATHS ENV ORACLE_HOME NO_DEFAULT_PATH)
+    FIND_PROGRAM(SQLPLUS sqlplus)
+    SET (sqlplus_version "${SQLPLUS} -version | ${AWK} '/Release/ {print $3}'")
     EXEC_PROGRAM(${sqlplus_version} OUTPUT_VARIABLE sqlplus_out)
     MESSAGE(STATUS "found sqlplus version: ${sqlplus_out}")
 

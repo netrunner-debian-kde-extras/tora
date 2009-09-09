@@ -7,13 +7,13 @@
 
 %define _name           tora
 
-%define _version        2.0.0
+%define _version        2.1.0
 %define _release        1
 
 # filter out oracle libraries because oracle-instantclient rpm doesn't provide them
 %define _use_internal_dependency_generator 0
 %{expand:%global __orig__find_requires %{__find_requires}}
-%define __find_requires  rpm/tora_filter_requires.sh %{__orig__find_requires}
+%define __find_requires  %{_builddir}/%{?buildsubdir}/rpm/tora_filter_requires.sh %{__orig__find_requires}
 
 
 
@@ -28,8 +28,11 @@ License:                GPL
 BuildRoot:              %{_tmppath}/tora-root
 BuildRequires: postgresql-devel
 BuildRequires: oracle-instantclient-devel
-BuildRequires: qt4 >= 4.3.0
+BuildRequires: qt4-devel >= 4.3.0
+BuildRequires: openssl-devel
 BuildRequires: perl
+BuildRequires: cmake >= 2.4.0
+Requires:      qt4 >= 4.3.0
 Requires:      oracle-instantclient-basic
 
 
@@ -54,14 +57,6 @@ a free registration from Oracle Technet from http://technet.oracle.com. NOTE: Yo
 will require to download the entire server distribution to install the client, but
 it is available as a choice in the installer.
 
-%changelog
-* Tue Oct  7 2008 Michael Mraka <michael.mraka@redhat.com> 2.0.0-0.3041svn
-- changed to cmake driven build for 2.0.0 version
-- built against oracle-instantclient 
-
-* Mon Jun 29 2005 Nathan Neulinger <nneul@neulinger.org>
-- standardize on a single tora spec file
-
 %prep
 %setup -q
 
@@ -72,11 +67,19 @@ export CFLAGS="$RPM_OPT_FLAGS"
 export CXXFLAGS="$RPM_OPT_FLAGS"
 unset ORACLE_HOME
 
+%define oraincdir /usr/include/oracle
+%define oralibdir /usr/lib/oracle
+%define oraclientdir client
+
+%ifarch x86_64 s390x
+%define oraclientdir client64
+%endif
+
 %{__cmake} \
         -DCMAKE_INSTALL_PREFIX:PATH=%{_prefix} \
         -DWANT_INTERNAL_QSCINTILLA=1 \
-        -DORACLE_PATH_INCLUDES=$(ls -d -1 %{_includedir}/oracle/*/client | tail -n 1) \
-        -DORACLE_PATH_LIB=$(ls -d -1 %{_libdir}/oracle/*/client/lib | tail -n 1) \
+        -DORACLE_PATH_INCLUDES=$(ls -d -1 %{oraincdir}/*/%{oraclientdir} | tail -n 1) \
+        -DORACLE_PATH_LIB=$(ls -d -1 %{oralibdir}/*/%{oraclientdir}/lib | tail -n 1) \
         -DPOSTGRESQL_PATH_INCLUDES=%{_includedir} \
         .
 
@@ -121,3 +124,15 @@ perl -pi -e 's/(libclntsh.so)(\.\d+\.\d+)/sprintf("%s%s",$1,"\0" x length($2))/g
 
 %clean
 %{__rm} -rf "${RPM_BUILD_ROOT}"
+
+%changelog
+* Tue Nov 18 2008 Michael Mraka <michael.mraka@redhat.com> 2.0.0-0.3100svn
+- added cmake 2.4 patch
+
+* Tue Oct  7 2008 Michael Mraka <michael.mraka@redhat.com> 2.0.0-0.3041svn
+- changed to cmake driven build for 2.0.0 version
+- built against oracle-instantclient 
+
+* Mon Jun 29 2005 Nathan Neulinger <nneul@neulinger.org>
+- standardize on a single tora spec file
+

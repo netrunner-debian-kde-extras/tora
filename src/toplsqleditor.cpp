@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -420,17 +420,17 @@ void toPLSQLEditor::changePackage(const QModelIndex &current, const QModelIndex 
     toBusy busy;
 
 //     qDebug() << "toDebug::changePackage 1";
-    QTreeWidgetItem *item = static_cast<QTreeWidgetItem*>(current.internalPointer());
+    toCodeModelItem *item = static_cast<toCodeModelItem*>(current.internalPointer());
     if (item && item->parent())
     {
-        QString ctype = item->parent()->text(0);
+        QString ctype = item->parent()->display();
         if(ctype.isEmpty() || ctype == "Code")
             return;
         ctype = ctype.toUpper();
 
-        viewSource(Schema->currentText(), item->text(0), ctype, 0);
+        viewSource(Schema->currentText(), item->display(), ctype, 0);
         if (ctype == "PACKAGE" || ctype == "TYPE")
-            viewSource(Schema->currentText(), item->text(0), ctype + " BODY", 0);
+            viewSource(Schema->currentText(), item->display(), ctype + " BODY", 0);
     }
 #ifdef AUTOEXPAND
     else if (item && !item->parent())

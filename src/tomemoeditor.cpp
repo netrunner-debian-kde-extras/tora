@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -57,11 +57,12 @@
 
 #include <QKeyEvent>
 #include <QVBoxLayout>
-#include <QDesktopWidget>
+#include <QDialogButtonBox>
 #include <QSettings>
 
 #include "icons/commit.xpm"
 #include "icons/copy.xpm"
+#include "icons/wordwrap.xpm"
 #include "icons/cut.xpm"
 #include "icons/fileopen.xpm"
 #include "icons/filesave.xpm"
@@ -134,11 +135,7 @@ toMemoEditor::toMemoEditor(QWidget *parent,
         Row(row),
         Col(col)
 {
-
     setModal(modal);
-    setMinimumSize(400, 300);
-    QDesktopWidget *paramDesktop = new QDesktopWidget;
-    setMaximumWidth(paramDesktop->availableGeometry(this).width()*2 / 3);
 
     setWindowTitle("Memo Editor");
 
@@ -157,6 +154,10 @@ toMemoEditor::toMemoEditor(QWidget *parent,
     vbox->addWidget(Editor);
     Editor->setReadOnly(Row < 0 || Col < 0 || listView());
     Editor->setFocus();
+
+    QDialogButtonBox * buttonBox = new QDialogButtonBox(QDialogButtonBox::Close, Qt::Horizontal, this);
+    vbox->addWidget(buttonBox);
+    connect(buttonBox, SIGNAL(rejected()), this, SLOT(close()));
 
     if (Row >= 0 && Col >= 0 && !listView())
     {
@@ -210,6 +211,13 @@ toMemoEditor::toMemoEditor(QWidget *parent,
             act,
             SLOT(setEnabled(bool)));
     act->setEnabled(false);
+
+    QAction * WordWrapAct = new QAction(QIcon(QPixmap(const_cast<const char**>(wordwrap_xpm))),
+                                         tr("Word Wrap"), Toolbar);
+    WordWrapAct->setCheckable(true);
+    connect(WordWrapAct, SIGNAL(toggled(bool)),
+             Editor, SLOT(setWordWrap(bool)));
+    Toolbar->addAction(WordWrapAct);
 
     if (Row >= 0 && Col >= 0 && !listView())
     {

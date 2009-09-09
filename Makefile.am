@@ -44,8 +44,9 @@ ACLOCAL_AMFLAGS = -I config/m4
 READMES = README\
 	README.CODESTYLE \
 	README.LICENSE \
-	README.OSX \
+	README.LAYOUT \
 	README.CMAKE \
+	README.OSX \
 	README.SVN \
 	README.BINARIES \
 	README.RELEASE \
@@ -55,7 +56,6 @@ EXTRA_DIST = debian \
 	rpm \
 	BUGS \
 	COPYING \
-	Makefile.OSX \
 	Makefile.mingw \
 	$(READMES) \
 	config/m4 \
@@ -69,5 +69,8 @@ EXTRA_DIST = debian \
 
 dist-hook:
 	rm -rf `find $(distdir) -name .svn`
+	rm -rf `find $(distdir) -name moc_*.cpp`
+	rm -rf `find $(distdir) -name ui_*.h`
+	rm -rf `find $(distdir) -name qrc_tora.cpp`
 
 SUBDIRS = utils src test doc

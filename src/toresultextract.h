@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -64,6 +64,8 @@ public:
      * @param name Name of widget.
      */
     toResultExtract(bool prompt, QWidget *parent, const char *name = NULL);
+    //! \brief Dummy constructor for Qt designer usage
+    toResultExtract(QWidget * parent = 0);
 
     /** Ignores sql and extect object name and owner as parameters.
      */
