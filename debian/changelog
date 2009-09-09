@@ -2,8 +2,9 @@ tora (2.1.0-1) unstable; urgency=low
 
   * New upstream version.
   * Bumped Standards-Version to 3.8.3, no changes needed.
+  * New project homepage.
 
- -- Michael Meskes <meskes@debian.org>  Wed, 09 Sep 2009 11:40:40 +0200
+ -- Michael Meskes <meskes@debian.org>  Wed, 09 Sep 2009 11:42:35 +0200
 
 tora (2.0.0-4) unstable; urgency=low
 
