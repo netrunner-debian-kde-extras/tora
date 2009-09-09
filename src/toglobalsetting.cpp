@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -353,24 +353,19 @@ toToolSetting::toToolSetting(QWidget *parent, const char *name, Qt::WFlags fl)
 
     std::map<QString, toTool *> &tools = toTool::tools();
     Enabled->setSorting(0);
+    ToolsMap tMap(toConfigurationSingle::Instance().tools());
     for (std::map<QString, toTool *>::iterator i = tools.begin();i != tools.end();i++)
     {
         if ((*i).second->menuItem())
         {
             QString menuName = qApp->translate("toTool", (*i).second->menuItem());
             DefaultTool->addItem(menuName);
-            new toTreeWidgetItem(Enabled, menuName, (*i).second->name(), (*i).first);
+            toTreeWidgetItem *item = new toTreeWidgetItem(Enabled,
+                                                          menuName,
+                                                          (*i).second->name(),
+                                                          (*i).first);
+            item->setSelected(tMap[(*i).first]);
         }
-    }
-
-    ToolsMap tMap(toConfigurationSingle::Instance().tools());
-    for (QTreeWidgetItemIterator it(Enabled); (*it); it++)
-    {
-//         QString tmp = (*it)->text(2).toLatin1();
-//         tmp += CONF_TOOL_ENABLE;
-        (*it)->setSelected(tMap[(*it)->text(2)]);
-//         if (!toConfigurationSingle::Instance().globalConfig(tmp, "Yes").isEmpty())
-//             (*it)->setSelected(true);
     }
 
     // set the default tool to prevent overvritting when

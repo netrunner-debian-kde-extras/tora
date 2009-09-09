@@ -360,7 +360,7 @@ static QString QueryParam(const QString &in, toQList &params, std::list<QString>
                         break;
                     }
                     if (cpar == params.end())
-                        throw QString::fromLatin1("Not all bind variables supplied");
+                        throw toConnection::exception(QString::fromLatin1("Not all bind variables supplied"), i);
                     if ((*cpar).isNull())
                     {
                         str = QString::fromLatin1("NULL");
@@ -1406,11 +1406,16 @@ class qSqlSetting : public QWidget, public toSettingTab
         }
         virtual int rowsProcessed(void)
         {
-            LockingPtr<QSqlDatabase> ptr(Connection->Connection, Connection->Lock);
+            try {
+                LockingPtr<QSqlDatabase> ptr(Connection->Connection, Connection->Lock, true);
 
-            if (!Query)
+                if (!Query)
+                    return 0;
+                return Query->numRowsAffected();
+            }
+            catch(...) {
                 return 0;
-            return Query->numRowsAffected();
+            }
         }
         virtual int columns(void)
         {
@@ -1745,14 +1750,19 @@ class qSqlConnection : public toConnection::connectionImpl
         }
     }
 
+
     ~toQSqlProvider()
     {
+#ifdef Q_WS_MAC
+#warning "toQSqlProvider is disabled for Mac OS X due crashes. Maybe it is not a correct solution..."
+#else
         for (int i = 0;i < Drivers.count();i++)
         {
             QString t = fromQSqlName(Drivers[i]);
             if (!t.isEmpty())
                 removeProvider(t);
         }
+#endif
     }
 
     virtual QWidget *providerConfigurationTab(const QString &provider,

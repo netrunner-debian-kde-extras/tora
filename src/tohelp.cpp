@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -218,12 +218,14 @@ void toHelpTool::displayHelp(void)
 static toHelpTool HelpTool;
 
 toHelp::toHelp(QWidget *parent, QString name, bool modal)
-        : QDialog(parent,
-                  Qt::Window |
-                  Qt::WindowTitleHint |
-                  Qt::WindowSystemMenuHint |
-                  Qt::WindowMinimizeButtonHint |
-                  Qt::WindowMaximizeButtonHint)
+        : QDialog(parent)
+//                  ,
+//                  Qt::Window |
+//                  Qt::WindowTitleHint |
+//                  Qt::WindowSystemMenuHint |
+//                  Qt::WindowMinimizeButtonHint |
+//                  Qt::WindowMaximizeButtonHint |
+//                  Qt::WindowCloseButtonHint)
 {
     setupUi(this);
     setModal(modal);

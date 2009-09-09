@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -108,6 +108,15 @@ public:
                schema == other.schema;
     }
 
+    bool operator==(const toConnection &conn)
+    {
+        return conn.user() == username &&
+            conn.provider() == provider &&
+            conn.host() == host + ":" + QString::number(port) &&
+            conn.database() == database &&
+            (schema.isEmpty() || (conn.schema() == schema));
+    }
+
     bool operator!=(const toConnectionOptions &other)
     {
         return !operator==(other);
@@ -127,9 +136,6 @@ private:
     int DefaultPort;
 
     QMenu *PreviousContext;
-
-    toConnectionModel * m_connectionModel;
-    QSortFilterProxyModel * m_proxyModel;
 
     // connection created by dialog
     toConnection *NewConnection;
@@ -158,6 +164,13 @@ public:
     {
         return NewConnection;
     }
+
+    static const QString ORACLE_INSTANT;
+    static const QString ORACLE_TNS;
+
+    static toConnectionModel* connectionModel(void);
+    static QSortFilterProxyModel* proxyModel(void);
+
 
 public slots:
 

@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -50,9 +50,8 @@ class toListViewFormatterText : public toListViewFormatter
 public:
     toListViewFormatterText();
     virtual ~toListViewFormatterText();
-    virtual QString getFormattedString(toListView& tListView);
     virtual QString getFormattedString(toExportSettings &settings,
-                                       const toResultModel *model);
+                                       const QAbstractItemModel * model);
 };
 
 #endif

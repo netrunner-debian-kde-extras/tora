@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -83,7 +83,8 @@ public:
         String = 4,
         DefaultBg = 5,
         ErrorBg = 6,
-        DebugBg = 7
+        DebugBg = 7,
+        CurrentLineMarker = 8
     };
 private:
     /** Indicate if colors are updated, can't do this in constructor since QApplication
@@ -92,14 +93,14 @@ private:
     bool ColorsUpdated;
     /** Colors allocated for the different @ref infoType values.
      */
-    QColor Colors[8];
+    QMap<infoType,QColor> Colors;
 
     /** marker per linea contenente errori
       */
-    int errorMarker;
+//     int errorMarker;
     /** marker per linea corrente
       */
-    int debugMarker;
+//     int debugMarker;
     /** Keeps track of possible hits found so far.
      */
     struct posibleHit
@@ -238,9 +239,28 @@ private:
     QStringList defaultCompletion;
 
 protected:
-    int debugMarker;
-    int errorMarker;
+    //! \brief A handler for debug - line highlighted
+    int m_debugHandle;
+    //! \brief A handler for debug - margin
+    int m_debugMarginHandle;
+    //! \brief A handler for code error - line highlighted
+    int m_errorHandle;
+    //! \brief A handler for code error - margin
+    int m_errorMarginHandle;
+    //! \brief A handler for current line highlighting - line highlighted
+    int m_currentLineHandle;
+    //! \brief A handler for current line highlighting - margin
+    int m_currentLineMarginHandle;
+    //! \brief A handler for bookrmarks - line highlighted
+    int m_bookmarkHandle;
+    //! \brief A handler for bookrmarks - margin
+    int m_bookmarkMarginHandle;
+    //! \brief Bookrmarks handler list used for navigation (next/prev)
+    QList<int> m_bookmarks;
+
     toComplPopup* popup;
+
+    virtual void keyPressEvent(QKeyEvent * e);
 
 public:
     friend class toComplPopup;
@@ -256,7 +276,11 @@ public:
      */
     virtual ~toHighlightedText();
 
-public:
+    /*! \brief Inherited from toMarkedText to clear all required editor
+    markers;
+    */
+    virtual void openFilename(const QString &file);
+
     /**
      * Set the lexer to use.
      * @param lexer to use,
@@ -379,6 +403,10 @@ public slots:
     /** Go to previous error.
      */
     void previousError(void);
+
+    void handleBookmark();
+    void gotoPrevBookmark();
+    void gotoNextBookmark();
 
     virtual void autoCompleteFromAPIs();
 

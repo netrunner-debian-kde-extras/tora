@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -341,7 +341,8 @@ void toComplPopup::keyPressEvent(QKeyEvent * e)
 
 
 toHighlightedText::toHighlightedText(QWidget *parent, const char *name)
-        : toMarkedText(parent, name), lexer(0), syntaxColoring(false)
+        : toMarkedText(parent, name),
+        lexer(0)
 {
     sqlLexer()->setDefaultFont(toStringToFont(toConfigurationSingle::Instance().codeFont()));
 
@@ -373,11 +374,32 @@ toHighlightedText::toHighlightedText(QWidget *parent, const char *name)
     // set the font
     setFont(toStringToFont(toConfigurationSingle::Instance().codeFont()));
 
-    errorMarker = markerDefine(Circle, 4);
-    debugMarker = markerDefine(Rectangle, 8);
+    m_errorMarginHandle = markerDefine(QsciScintilla::Circle);
+    m_errorHandle = markerDefine(QsciScintilla::Background);
+
+    m_debugMarginHandle = markerDefine(QsciScintilla::Rectangle);
+    m_debugHandle = markerDefine(QsciScintilla::Background);
+
+    m_currentLineMarginHandle = markerDefine(QsciScintilla::RightArrow);
+    m_currentLineHandle = markerDefine(QsciScintilla::Background);
+
+    m_bookmarkMarginHandle = markerDefine(QsciScintilla::RightTriangle);
+    m_bookmarkHandle = markerDefine(QsciScintilla::Background);
+
     updateSyntaxColor(toSyntaxAnalyzer::DebugBg);
     updateSyntaxColor(toSyntaxAnalyzer::ErrorBg);
-    setMarginMarkerMask(1, 0);
+    updateSyntaxColor(toSyntaxAnalyzer::CurrentLineMarker);
+
+    // handle "max text width" mark
+    if (toConfigurationSingle::Instance().useMaxTextWidthMark())
+    {
+        setEdgeColumn(toConfigurationSingle::Instance().maxTextWidthMark());
+        setEdgeColor(DefaultAnalyzer.getColor(toSyntaxAnalyzer::CurrentLineMarker).darker(150));
+        setEdgeMode(QsciScintilla::EdgeLine);
+    }
+    else
+        setEdgeMode(QsciScintilla::EdgeNone);
+
     setAutoIndent(true);
     connect(this, SIGNAL(cursorPositionChanged(int, int)), this, SLOT(setStatusMessage(void )));
     complAPI = new QsciAPIs(lexer);
@@ -394,6 +416,39 @@ toHighlightedText::toHighlightedText(QWidget *parent, const char *name)
             SIGNAL(itemActivated(QListWidgetItem*)),
             this,
             SLOT(completeFromAPI(QListWidgetItem*)));
+}
+
+void toHighlightedText::keyPressEvent(QKeyEvent * e)
+{
+    // handle editor shortcuts with TAB
+    // It uses qscintilla lowlevel API to handle "word unde cursor"
+    // This code is taken from sqliteman.com
+    if (toConfigurationSingle::Instance().useEditorShortcuts()
+        && e->key() == Qt::Key_Tab)
+    {
+        int pos = SendScintilla(SCI_GETCURRENTPOS);
+        int start = SendScintilla(SCI_WORDSTARTPOSITION, pos,true);
+        int end = SendScintilla(SCI_WORDENDPOSITION, pos, true);
+        SendScintilla(SCI_SETSELECTIONSTART, start, true);
+        SendScintilla(SCI_SETSELECTIONEND, end, true);
+        QString key(selectedText());
+        EditorShortcutsMap shorts(toConfigurationSingle::Instance().editorShortcuts());
+        if (shorts.contains(key))
+        {
+            removeSelectedText();
+            insert(shorts.value(key).toString());
+            SendScintilla(SCI_SETCURRENTPOS,
+                           SendScintilla(SCI_GETCURRENTPOS) +
+                           shorts.value(key).toString().length());
+            pos = SendScintilla(SCI_GETCURRENTPOS);
+            SendScintilla(SCI_SETSELECTIONSTART, pos,true);
+            SendScintilla(SCI_SETSELECTIONEND, pos, true);
+            return;
+        }
+        SendScintilla(SCI_SETSELECTIONSTART, pos,true);
+        SendScintilla(SCI_SETSELECTIONEND, pos, true);
+    }
+    toMarkedText::keyPressEvent(e);
 }
 
 toHighlightedText::~toHighlightedText()
@@ -415,6 +470,11 @@ void toHighlightedText::positionChanged(int row, int col)
         if (timer->isActive())
             timer->stop();
     }
+    // current line marker
+    markerDeleteAll(m_currentLineHandle);
+    markerDeleteAll(m_currentLineMarginHandle);
+    markerAdd(row, m_currentLineHandle);
+    markerAdd(row, m_currentLineMarginHandle);
 }
 
 static QString UpperIdent(const QString &str)
@@ -521,6 +581,7 @@ void toHighlightedText::setSyntaxColoring(bool val)
         updateSyntaxColor(toSyntaxAnalyzer::Keyword);
         updateSyntaxColor(toSyntaxAnalyzer::String);
         updateSyntaxColor(toSyntaxAnalyzer::DefaultBg);
+        updateSyntaxColor(toSyntaxAnalyzer::CurrentLineMarker);
 
         update();
     }
@@ -568,14 +629,32 @@ void toHighlightedText::updateSyntaxColor(toSyntaxAnalyzer::infoType t)
         //lexer->setPaper(col, QsciLexerSQL::Default);
         break;
     case toSyntaxAnalyzer::ErrorBg:
-        setMarkerBackgroundColor(col, errorMarker);
+        setMarkerBackgroundColor(col, m_errorHandle);
         break;
     case toSyntaxAnalyzer::DebugBg:
-        setMarkerBackgroundColor(col, debugMarker);
+        setMarkerBackgroundColor(col, m_debugHandle);
+        break;
+    case toSyntaxAnalyzer::CurrentLineMarker:
+        setMarkerBackgroundColor(col, m_currentLineHandle);
+//         setMarkerBackgroundColor(col, m_currentLineMarginHandle);
+        // TODO/FIXME?: make it configurable - color.
+        setMarkerBackgroundColor(DefaultAnalyzer.getColor(toSyntaxAnalyzer::CurrentLineMarker).lighter(100),
+                          m_bookmarkHandle);
         break;
     default:
         break;
     }
+}
+
+
+void toHighlightedText::openFilename(const QString & file)
+{
+    toMarkedText::openFilename(file);
+
+    m_bookmarks.clear();
+    markerDeleteAll(m_bookmarkHandle);
+    markerDeleteAll(m_bookmarkMarginHandle);
+    setErrors(QMap<int,QString>());
 }
 
 /**
@@ -621,10 +700,15 @@ void toHighlightedText::setFont (const QFont & font)
 void toHighlightedText::setCurrent(int current)
 {
     setCursorPosition (current, 0);
-    markerDeleteAll(debugMarker);
+    markerDeleteAll(m_debugHandle);
+    markerDeleteAll(m_debugMarginHandle);
     if (current >= 0)
-        markerAdd(current, debugMarker);
+    {
+        markerAdd(current, m_debugHandle);
+        markerAdd(current, m_debugMarginHandle);
+    }
 }
+
 void toHighlightedText::tableAtCursor(QString &owner, QString &table, bool mark)
 {
     try
@@ -723,14 +807,71 @@ void toHighlightedText::previousError(void)
         setCursorPosition(curcol, 0);
 }
 
+void toHighlightedText::handleBookmark()
+{
+    int curline, curcol;
+    getCursorPosition (&curline, &curcol);
+
+    if (m_bookmarks.contains(curline))
+    {
+        markerDelete(curline, m_bookmarkHandle);
+        markerDefine(curline, m_bookmarkMarginHandle);
+        m_bookmarks.removeAll(curline);
+    }
+    else
+    {
+        markerAdd(curline, m_bookmarkHandle);
+        markerAdd(curline, m_bookmarkMarginHandle);
+        m_bookmarks.append(curline);
+    }
+    qSort(m_bookmarks);
+}
+
+void toHighlightedText::gotoPrevBookmark()
+{
+    int curline, curcol;
+    getCursorPosition (&curline, &curcol);
+    --curline;
+
+    int newline = -1;
+    foreach(int i, m_bookmarks)
+    {
+        if (curline < i)
+            break;
+        newline = i;
+    }
+    if (newline >= 0)
+        setCursorPosition(newline, 0);
+}
+
+void toHighlightedText::gotoNextBookmark()
+{
+    int curline, curcol;
+    getCursorPosition (&curline, &curcol);
+    ++curline;
+
+    int newline = -1;
+    foreach(int i, m_bookmarks)
+    {
+        if (curline > i)
+            continue;
+        newline = i;
+        break;
+    }
+    if (newline >= 0)
+        setCursorPosition(newline, 0);
+}
+
 void toHighlightedText::setErrors(const QMap<int, QString> &errors)
 {
     Errors = errors;
     setStatusMessage();
-    markerDeleteAll(errorMarker);
+    markerDeleteAll(m_errorHandle);
+    markerDeleteAll(m_errorMarginHandle);
     for (QMap<int, QString>::const_iterator i = Errors.begin();i != Errors.end();i++)
     {
-        markerAdd(i.key(), errorMarker);
+        markerAdd(i.key(), m_errorHandle);
+        markerAdd(i.key(), m_errorMarginHandle);
     }
 }
 

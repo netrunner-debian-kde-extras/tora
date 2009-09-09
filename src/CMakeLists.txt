@@ -1,3 +1,5 @@
+INCLUDE(ToraCompat)
+
 #Subdirectories
 # ADD_SUBDIRECTORY(i18n)
 ADD_SUBDIRECTORY(loki)
@@ -29,8 +31,8 @@ SET(TORA_UI_SRC
     todatabasesettingui.ui
     todebugchangeui.ui
     todebugwatch.ui
+    todescribeui.ui
     todroptablespaceui.ui
-#     toeditextensiongotoui.ui
     toeditextensionsetupui.ui
     toglobalsettingui.ui
     tohelpaddfileui.ui
@@ -45,6 +47,7 @@ SET(TORA_UI_SRC
     toresultcontentfilterui.ui
     toresultlistformatui.ui
     torollbackdialogui.ui
+#    toschedulerui.ui
     toscriptui.ui
     toscriptschemawidgetui.ui
     tosearchreplaceui.ui
@@ -64,6 +67,8 @@ SET(TORA_UI_SRC
     totuningoverviewui.ui
     totuningsettingui.ui
     toworksheetsetupui.ui
+    # shortcuteditor
+    shortcuteditor/shortcuteditordialog.ui
 )
 IF (ORACLE_FOUND)
     LIST (APPEND TORA_UI_SRC tooraclesettingui.ui)
@@ -82,20 +87,37 @@ SET(TORA_MOC_CLASSES
     tobackgroundlabel.h
     tobrowserconstraint.h
     tobrowser.h
+    toresultgrants.h
     tobrowserindex.h
     tobrowsertable.h
+    tobrowserbasewidget.h
+    tobrowseraccesswidget.h
+    tobrowsertablewidget.h
+    tobrowserviewwidget.h
+    tobrowserindexwidget.h
+    tobrowserschemawidget.h
+    tobrowsersequencewidget.h
+    tobrowsersynonymwidget.h
+    tobrowsercodewidget.h
+    tobrowsertriggerwidget.h
+    tobrowserdblinkswidget.h
+#     tobrowserschemabasewidget.h
 #     toconf.h
 #     toconfiguration.h
     toconnection.h
     toconnectionimport.h
     toconnectionmodel.h
     toconnectionpool.h
+    todocklet.h
+    todockbar.h
+    topushbutton.h
     torunnable.h
     tonoblockquery.h
     tocurrent.h
     todatatype.h
     todebug.h
     todebugtext.h
+    todescribe.h
 #     todefaultkeywords.h
     toeditextensions.h
 #     toeditwidget.h
@@ -170,6 +192,7 @@ SET(TORA_MOC_CLASSES
     toresultview.h
     toresultlistformat.h
     torollback.h
+#    toscheduler.h
     toscript.h
     toscriptschemawidget.h
 #     toscripttreeitem.h
@@ -209,6 +232,12 @@ SET(TORA_MOC_CLASSES
 #     toworksheettext.h
     toworksheetwidget.h
     utils.h
+# shortcuteditor
+    shortcuteditor/shortcuteditordialog.h
+    shortcuteditor/shortcutmodel.h
+# docklets
+    docklets/toviewconnections.h
+    docklets/toviewdirectory.h
 )
 IF (ORACLE_FOUND)
     LIST(APPEND TORA_MOC_CLASSES tooraclesetting.h)
@@ -227,19 +256,36 @@ SET(TORA_SOURCES
     tobarchart.cpp
     tobrowserconstraint.cpp
     tobrowser.cpp
+    toresultgrants.cpp
     tobrowserindex.cpp
     tobrowsertable.cpp
+    tobrowserbasewidget.cpp
+    tobrowseraccesswidget.cpp
+    tobrowsertablewidget.cpp
+    tobrowserviewwidget.cpp
+    tobrowserindexwidget.cpp
+    tobrowserschemawidget.cpp
+    tobrowsersequencewidget.cpp
+    tobrowsersynonymwidget.cpp
+    tobrowsercodewidget.cpp
+    tobrowsertriggerwidget.cpp
+    tobrowserdblinkswidget.cpp
+#     tobrowserschemabasewidget.cpp
     toconfiguration.cpp
     toconnection.cpp
     toqvalue.cpp
     toconnectionimport.cpp
     toconnectionmodel.cpp
     toconnectionpool.cpp
+    todocklet.cpp
+    todockbar.cpp
+    topushbutton.cpp
     torunnable.cpp
     tocurrent.cpp
     todatatype.cpp
     todebug.cpp
     todebugtext.cpp
+    todescribe.cpp
     toeditextensions.cpp
     toeditwidget.cpp
     toextract.cpp
@@ -314,6 +360,7 @@ SET(TORA_SOURCES
     toresultview.cpp
     toresultlistformat.cpp
     torollback.cpp
+#    toscheduler.cpp
     toscript.cpp
     toscriptschemawidget.cpp
     toscripttreeitem.cpp
@@ -358,11 +405,26 @@ SET(TORA_SOURCES
     migratetool/sqldeveloper.cpp
     migratetool/squirrelsql.cpp
     migratetool/tora3.cpp
+    # shortcuteditor
+    shortcuteditor/shortcuteditordialog.cpp
+    shortcuteditor/shortcutmodel.cpp
+    # docklets
+    docklets/toviewconnections.cpp
+    docklets/toviewdirectory.cpp
 )
 # compiled in icons for windows
 IF (WIN32 AND MSVC)
     SET (TORA_SOURCES ${TORA_SOURCES} tora.rc)
 ENDIF (WIN32 AND MSVC)
+if (WIN32 AND MINGW)
+    # resource compilation for mingw
+    ADD_CUSTOM_COMMAND(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tora_rc.o
+                       COMMAND windres.exe -I${CMAKE_CURRENT_SOURCE_DIR}
+                              -i${CMAKE_CURRENT_SOURCE_DIR}/tora.rc
+                              -o ${CMAKE_CURRENT_BINARY_DIR}/tora_rc.o)
+    SET(TORA_SOURCES ${TORA_SOURCES} ${CMAKE_CURRENT_BINARY_DIR}/tora_rc.o)
+endif (WIN32 AND MINGW)
+
 
 
 QT4_ADD_TRANSLATION(TORA_I18N_QM ${TORA_I18N_TS})
@@ -415,27 +477,38 @@ ELSE (WANT_INTERNAL_QSCINTILLA)
 ENDIF (WANT_INTERNAL_QSCINTILLA)
 
 
+# Handle win/mac special stuff - it's left empty for linux/unix
+SET (GUI_TYPE)
+
 IF(WIN32)
     IF (MSVC)
         # this is a must to switch off subsystem:console (console window poping up)
         # WinMain wrapper from QT_QTMAIN_LIBRARY is used and liner must be modified
         LINK_LIBRARIES(${QT_QTMAIN_LIBRARY})
-        SET (WIN32_SUBSYSTEM WIN32)
-		IF (WANT_DEBUG)
+        SET (GUI_TYPE WIN32)
+	IF (WANT_DEBUG)
 	        SET (CMAKE_EXE_LINKER_FLAGS "/NODEFAULTLIB:msvcrtd.lib ${CMAKE_EXE_LINKER_FLAGS}")
-		ELSE (WANT_DEBUG)
+	ELSE (WANT_DEBUG)
             SET (CMAKE_EXE_LINKER_FLAGS "/NODEFAULTLIB:msvcrt.lib ${CMAKE_EXE_LINKER_FLAGS}")
-		ENDIF (WANT_DEBUG)
+	ENDIF (WANT_DEBUG)
     ENDIF (MSVC)
 ENDIF(WIN32)
 
+IF (APPLE AND WANT_BUNDLE)
+    SET(GUI_TYPE MACOSX_BUNDLE)
+    SET(MACOSX_BUNDLE_ICON_FILE tora.icns)
+    SET(APPLE_BUNDLE_SOURCES icons/tora.icns)
+    SET_SOURCE_FILES_PROPERTIES(${CMAKE_SOURCE_DIR}/src/icons/tora.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+ENDIF (APPLE AND WANT_BUNDLE)
 
-ADD_EXECUTABLE(${EXE_NAME} ${WIN32_SUBSYSTEM}
+
+ADD_EXECUTABLE(${EXE_NAME} ${GUI_TYPE}
   ${TORA_I18N_QM}
   ${TORA_MOC_SOURCES}
   ${TORA_SOURCES}
   ${TORA_UI_SOURCES}
   ${TORA_RCC_SRCS}
+  ${APPLE_BUNDLE_SOURCES}
 )
 
 #Set up libraries to link with all found packages
@@ -465,6 +538,10 @@ ENDIF (WIN32)
 IF (WIN32)
     INSTALL(TARGETS ${EXE_NAME} RUNTIME DESTINATION .)
 ELSE (WIN32)
-    INSTALL(TARGETS ${EXE_NAME} RUNTIME DESTINATION bin LIBRARY DESTINATION lib)
+    IF (NOT WANT_BUNDLE)
+        INSTALL(TARGETS ${EXE_NAME} RUNTIME DESTINATION bin LIBRARY DESTINATION lib)
+    ELSE (NOT WANT_BUNDLE)
+        INSTALL(TARGETS ${EXE_NAME} BUNDLE DESTINATION ${CMAKE_INSTALL_PREFIX})
+    ENDIF (NOT WANT_BUNDLE)
 ENDIF (WIN32)
 

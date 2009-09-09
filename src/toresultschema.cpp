@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -70,11 +70,12 @@ toResultSchema::toResultSchema(toConnection &conn,
     {
         if (toIsMySQL(conn))
             sel = conn.database();
-        else if (toIsOracle(conn) || toIsSapDB(conn))
-            sel = conn.user().toUpper();
         else
             sel = conn.user();
     }
+
+    // Oracle usernames are always in upper case
+    if (toIsOracle(conn) || toIsSapDB(conn)) sel = sel.toUpper();
 
     conn.setSchema(sel);
     setSelected(sel);
@@ -87,7 +88,7 @@ toResultSchema::toResultSchema(toConnection &conn,
 }
 
 
-#define CHANGE_CURRENT_SCHEMA QString("ALTER SESSION SET CURRENT_SCHEMA = %1")
+#define CHANGE_CURRENT_SCHEMA QString("ALTER SESSION SET CURRENT_SCHEMA = \"%1\"")
 #define CHANGE_CURRENT_SCHEMA_PG QString("SET search_path TO %1,\"$user\",public")
 
 void toResultSchema::update() {

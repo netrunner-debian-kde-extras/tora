@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -44,6 +44,7 @@
 #include "toconf.h"
 #include "tohighlightedtext.h"
 #include "tosyntaxsetup.h"
+#include "shortcuteditor/shortcuteditordialog.h"
 
 #include <stdio.h>
 
@@ -73,7 +74,12 @@ toSyntaxSetup::toSyntaxSetup(QWidget *parent, const char *name, Qt::WFlags fl)
     setupUi(this);
     KeywordUpper->setChecked(toConfigurationSingle::Instance().keywordUpper());
     SyntaxHighlighting->setChecked(toConfigurationSingle::Instance().highlight());
+    EdgeMarkCheckBox->setChecked(toConfigurationSingle::Instance().useMaxTextWidthMark());
+    EdgeSizeSpinBox->setValue(toConfigurationSingle::Instance().maxTextWidthMark());
     CodeCompletion->setChecked(toConfigurationSingle::Instance().codeCompletion());
+    EditorShortcuts->setChecked(toConfigurationSingle::Instance().useEditorShortcuts());
+    connect(EditorShortcutsEdit, SIGNAL(clicked()),
+             this, SLOT(openEditorShortcutsDialog()));
     CompletionSort->setChecked(toConfigurationSingle::Instance().completionSort());
     AutoIndent->setChecked(toConfigurationSingle::Instance().autoIndent());
     Extensions->setText(toConfigurationSingle::Instance().extensions());
@@ -119,6 +125,7 @@ toSyntaxSetup::toSyntaxSetup(QWidget *parent, const char *name, Qt::WFlags fl)
         INIT_COL(toSyntaxAnalyzer::DefaultBg);
         INIT_COL(toSyntaxAnalyzer::ErrorBg);
         INIT_COL(toSyntaxAnalyzer::DebugBg);
+        INIT_COL(toSyntaxAnalyzer::CurrentLineMarker);
     }
     TOCATCH;
 
@@ -189,6 +196,8 @@ toSyntaxAnalyzer::infoType toSyntaxAnalyzer::typeString(const QString &str)
         return ErrorBg;
     if (str == "Debug background")
         return DebugBg;
+    if (str == "Current line highlight")
+        return CurrentLineMarker;
     throw qApp->translate("toSyntaxAnalyzer", "Unknown type");
 }
 
@@ -212,6 +221,8 @@ QString toSyntaxAnalyzer::typeString(infoType typ)
         return "Error background";
     case DebugBg:
         return "Debug background";
+    case CurrentLineMarker:
+        return "Current line highlight";
     }
     throw qApp->translate("toSyntaxAnalyzer", "Unknown type");
 }
@@ -228,6 +239,7 @@ void toSyntaxAnalyzer::updateSettings(void)
         Colors[DefaultBg] = toConfigurationSingle::Instance().syntaxDefaultBg();
         Colors[ErrorBg] = toConfigurationSingle::Instance().syntaxErrorBg();
         Colors[DebugBg] = toConfigurationSingle::Instance().syntaxDebugBg();
+        Colors[CurrentLineMarker] = toConfigurationSingle::Instance().syntaxCurrentLineMarker();
     }
     TOCATCH
 }
@@ -276,6 +288,12 @@ void toSyntaxSetup::selectResultFont(void)
         List = toFontToString(font);
         ResultExample->setFont(font);
     }
+}
+
+void toSyntaxSetup::openEditorShortcutsDialog()
+{
+    ShortcutEditorDialog dia(this);
+    dia.exec();
 }
 
 QString toSyntaxSetup::color()
@@ -331,9 +349,12 @@ void toSyntaxSetup::saveSetting(void)
     toConfigurationSingle::Instance().setListFont(List);
     bool highlight = SyntaxHighlighting->isChecked();
     toConfigurationSingle::Instance().setHighlight(highlight);
+    toConfigurationSingle::Instance().setUseMaxTextWidthMark(EdgeMarkCheckBox->isChecked());
+    toConfigurationSingle::Instance().setMaxTextWidthMark(EdgeSizeSpinBox->value());
     toConfigurationSingle::Instance().setKeywordUpper(KeywordUpper->isChecked());
     toConfigurationSingle::Instance().setCodeCompletion(highlight && CodeCompletion->isChecked());
     toConfigurationSingle::Instance().setCodeCompletionSort(CompletionSort->isChecked());
+    toConfigurationSingle::Instance().setUseEditorShortcuts(EditorShortcuts->isChecked());
     toConfigurationSingle::Instance().setAutoIndent(AutoIndent->isChecked());
     toMarkedText::setDefaultTabWidth(TabStop->value());
     toConfigurationSingle::Instance().setTabStop(toMarkedText::defaultTabWidth());
@@ -359,6 +380,7 @@ void toSyntaxSetup::saveSetting(void)
     toConfigurationSingle::Instance().setSyntaxDefaultBg(C2T(toSyntaxAnalyzer::DefaultBg));
     toConfigurationSingle::Instance().setSyntaxDebugBg(C2T(toSyntaxAnalyzer::DebugBg));
     toConfigurationSingle::Instance().setSyntaxErrorBg(C2T(toSyntaxAnalyzer::ErrorBg));
+    toConfigurationSingle::Instance().setSyntaxCurrentLineMarker(C2T(toSyntaxAnalyzer::CurrentLineMarker));
 
     toSyntaxAnalyzer::defaultAnalyzer().updateSettings();
     toConfigurationSingle::Instance().setExtensions(Extensions->text());

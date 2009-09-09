@@ -67,68 +67,46 @@ public:
                         const QString &buf = QString::null)
             : toResultViewItem(parent, after, buf), AvailableGraph(available)
     { }
-    virtual void paintCell(QPainter * p, const QColorGroup & cg, int column, int width, int align)
+};
+
+class toResultStorageItemDelegate: public QItemDelegate
+{
+public:
+    toResultStorageItemDelegate()
     {
-#if 0                           // disabled, wrong override
-        if (column == 8)
-        {
-            QString ct = text(column);
-            if (ct.isEmpty())
-            {
-                toTreeWidgetItem::paintCell(p, cg, column, width, align);
-                return ;
+    }
+
+    void paint(QPainter *painter, const QStyleOptionViewItem &option, 
+               const QModelIndex & index ) const  
+    {
+        if(index.column() == 8 ) {
+            int left   = option.rect.left();
+            int top    = option.rect.top();
+            int width  = option.rect.width();
+            int height = option.rect.height();
+   
+            QString str = index.model()->data(index, Qt::DisplayRole).toString();
+            QStringList pct = str.split(QRegExp("/"));
+            
+            if (pct.count() == 3) {
+                int w_used = (int) (pct.at(0).toDouble() * width / 100);
+                int w_free = (int) (pct.at(1).toDouble() * width / 100);
+                int w_auto = width - w_used - w_free;
+
+                painter->fillRect(left, top,
+                            w_used, height, QBrush(Qt::darkRed/*Qt::red*/));
+                painter->fillRect(left + w_used, top,
+                            w_free, height, QBrush(Qt::darkGreen/*Qt::green*/));
+                painter->fillRect(left + w_used + w_free, top,
+                            w_auto, height, QBrush(Qt::darkBlue/*Qt::blue*/));
+                painter->setPen(Qt::white);
+                painter->drawText(option.rect,Qt::TextSingleLine,str);
+            } else {
+                QItemDelegate::paint(painter, option, index);
             }
-            ct = ct.left(ct.length() - 1); // Strip last %
-            double total = text(7).toDouble();
-            double user = text(5).toDouble();
-            double free = text(6).toDouble();
-            if (total < user || !AvailableGraph)
-                total = user;
-
-            QString t;
-
-            user /= total;
-            free /= total;
-            if (AvailableGraph)
-                t.sprintf("%0.1f / %0.1f / %0.1f %%", (user - free)*100, free*100, (1 - user)*100);
-            else
-                t.sprintf("%0.1f %%", free*100);
-            p->fillRect(0, 0, int((user - free)*width), height(),
-                        QBrush(Qt::red));
-            p->fillRect(int((user - free)*width), 0, int(user*width), height(),
-                        QBrush(Qt::blue));
-            if (AvailableGraph)
-                p->fillRect(int(user*width), 0, width, height(),
-                            QBrush(Qt::green));
-
-            QPen pen(Qt::white);
-            p->setPen(pen);
-            p->drawText(0, 0, width, height(), Qt::AlignCenter, t);
+        } else {
+            QItemDelegate::paint(painter, option, index);
         }
-        else if (column == 9)
-        {
-            QString ct = text(column);
-            if (ct.isEmpty())
-            {
-                toTreeWidgetItem::paintCell(p, cg, column, width, align);
-                return ;
-            }
-            ct = ct.left(ct.length() - 1); // Strip last %
-            double val = ct.toDouble();
-
-            p->fillRect(0, 0, int(val*width / 100), height(), QBrush(Qt::blue));
-            p->fillRect(int(val*width / 100), 0, width, height(),
-                        QBrush(isSelected() ? cg.highlight() : cg.base()));
-
-            QPen pen(isSelected() ? cg.highlightedText() : cg.foreground());
-            p->setPen(pen);
-            p->drawText(0, 0, width, height(), Qt::AlignCenter, text(column));
-        }
-        else
-        {
-            toTreeWidgetItem::paintCell(p, cg, column, width, align);
-        }
-#endif
     }
 };
 
@@ -142,7 +120,7 @@ toResultStorage::toResultStorage(bool available, QWidget *parent, const char *na
 {
     Unit = toConfigurationSingle::Instance().sizeUnit();
     setAllColumnsShowFocus(true);
-    setSorting(0);
+    setSortingEnabled(false); // enable it after data fetch
     setRootIsDecorated(true);
     addColumn(tr("Name"));
     addColumn(tr("Status"));
@@ -175,6 +153,7 @@ toResultStorage::toResultStorage(bool available, QWidget *parent, const char *na
     Tablespaces = Files = NULL;
 
     connect(&Poll, SIGNAL(timeout()), this, SLOT(poll()));
+    setItemDelegate(new toResultStorageItemDelegate());
 }
 
 toResultStorage::~toResultStorage()
@@ -602,6 +581,7 @@ void toResultStorage::query(void)
 
 void toResultStorage::updateList(void)
 {
+    setSortingEnabled(false); // enable it after data fetch
     clear();
     if (!OnlyFiles)
     {
@@ -609,7 +589,26 @@ void toResultStorage::updateList(void)
         {
             toTreeWidgetItem *tablespace = new toResultStorageItem(AvailableGraph, this, NULL);
             for (int i = 0;i < COLUMNS && j != TablespaceValues.end();i++, j++)
+            {
+                if (i == 8)
+                    continue;
                 tablespace->setText(i, *j);
+            }
+
+            // To fill Used/Free/Autoextend column
+            double total = tablespace->text(7).toDouble();
+            double user = tablespace->text(5).toDouble();
+            double free = tablespace->text(6).toDouble();
+            if (total < user )
+                total = user;
+            user /= total;
+            free /= total;
+            QString t;
+//             t.sprintf("%05.1f / %05.1f / %05.1f%%", (user-free)*100, free*100, (1 - user)*100);
+// spaces seems better than 0-filling...
+            t.sprintf("%#5.1f / %#5.1f / %#5.1f%%", (user-free)*100, free*100, (1 - user)*100);
+            tablespace->setText(8,t);
+            // end of Used/Free/Autoextend column
 
             if (CurrentSpace == tablespace->text(0))
             {
@@ -653,6 +652,7 @@ void toResultStorage::updateList(void)
             setSelected(file, true);
         }
     }
+    setSortingEnabled(true);
 }
 
 void toResultStorage::poll(void)
@@ -758,8 +758,13 @@ toStorageExtent::extentName::extentName(const QString &owner, const QString &tab
     Size = size;
 }
 
-bool toStorageExtent::extentName::operator < (const toStorageExtent::extentName &ext) const
+bool toStorageExtent::extentTotal::operator < (const toStorageExtent::extentTotal &ext) const
 {
+  if (fileView ) {
+    if (LastBlock < ext.LastBlock)
+      return true;
+    return false;
+  } else {
     if (Owner < ext.Owner)
         return true;
     if (Owner > ext.Owner)
@@ -771,6 +776,7 @@ bool toStorageExtent::extentName::operator < (const toStorageExtent::extentName 
     if (Partition < ext.Partition)
         return true;
     return false;
+  }
 }
 
 bool toStorageExtent::extentName::operator == (const toStorageExtent::extentName &ext) const
@@ -805,7 +811,7 @@ bool toStorageExtent::extent::operator == (const toStorageExtent::extent &ext) c
 }
 
 toStorageExtent::toStorageExtent(QWidget *parent, const char *name)
-        : QWidget(parent)
+  : QWidget(parent)
 {
     setObjectName(name);
     QPalette pal = palette();
@@ -906,6 +912,7 @@ static toSQL SQLTablespaceBlocks("toStorageExtent:TablespaceSize",
 
 void toStorageExtent::setTablespace(const QString &tablespace)
 {
+    fileView = false;
     try
     {
         if (Tablespace == tablespace)
@@ -964,6 +971,7 @@ void toStorageExtent::setTablespace(const QString &tablespace)
 
 void toStorageExtent::setFile(const QString &tablespace, int file)
 {
+    fileView = true;
     try
     {
         toBusy busy;
@@ -1093,12 +1101,13 @@ std::list<toStorageExtent::extentTotal> toStorageExtent::objects(void)
             {
                 (*j).Size += (*i).Size;
                 (*j).Extents++;
+                (*j).LastBlock = ( ((*j).LastBlock > (*i).Block) ? (*j).LastBlock : (*i).Block );
                 dup = true;
                 break;
             }
         }
         if (!dup)
-            toPush(ret, extentTotal((*i).Owner, (*i).Table, (*i).Partition, (*i).Size));
+            toPush(ret, extentTotal((*i).Owner, (*i).Table, (*i).Partition, (*i).Block, (*i).Size));
     }
 
     ret.sort();
@@ -1109,7 +1118,7 @@ std::list<toStorageExtent::extentTotal> toStorageExtent::objects(void)
 static toSQL SQLListExtents("toResultStorage:ListExtents",
                             "SELECT * \n"
                             "  FROM SYS.DBA_EXTENTS WHERE OWNER = :f1<char[101]> AND SEGMENT_NAME = :f2<char[101]>\n"
-                            " ORDER BY extent_id",
+                            " ORDER BY block_id",
                             "List the extents of a table in a schema.",
                             "" ,
                             "Oracle");
@@ -1159,3 +1168,5 @@ void toResultExtent::query(const QString &sql, const toQList &params)
     }
     TOCATCH
 }
+
+bool toStorageExtent::fileView;

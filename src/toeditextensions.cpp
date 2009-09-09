@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -86,10 +86,16 @@ QMenu   *CaseMenu  = NULL;
 QAction *UpperCase = NULL;
 QAction *LowerCase = NULL;
 
+QMenu * BookmarkMenu = NULL;
+QAction * BookmarkSwitchAct = NULL;
+QAction * BookmarkPrevAct = NULL;
+QAction * BookmarkNextAct = NULL;
+
 QAction *Indent       = NULL;
 QAction *Deindent     = NULL;
 QAction *Quote        = NULL;
 QAction *UnQuote      = NULL;
+QAction *Comment      = NULL;
 QAction *GotoLine     = NULL;
 QAction *AutoComplete = NULL;
 
@@ -143,6 +149,7 @@ void toEditExtensions::editEnabled(bool enable)
     IncMenu->setEnabled(enable);
     IndentMenu->setEnabled(enable);
     CaseMenu->setEnabled(enable);
+    BookmarkMenu->setEnabled(enable);
 
     Indent->setEnabled(enable);
     Deindent->setEnabled(enable);
@@ -151,6 +158,27 @@ void toEditExtensions::editEnabled(bool enable)
     GotoLine->setEnabled(enable);
 
     AutoComplete->setEnabled(enable);
+}
+
+void toEditExtensions::bookmarkSwitch()
+{
+    toHighlightedText * t = qobject_cast<toHighlightedText*>(Current);
+    if (t)
+        t->handleBookmark();
+}
+
+void toEditExtensions::bookmarkPrev()
+{
+    toHighlightedText * t = qobject_cast<toHighlightedText*>(Current);
+    if (t)
+        t->gotoPrevBookmark();
+}
+
+void toEditExtensions::bookmarkNext()
+{
+    toHighlightedText * t = qobject_cast<toHighlightedText*>(Current);
+    if (t)
+        t->gotoNextBookmark();
 }
 
 void toEditExtensions::gotoLine()
@@ -337,6 +365,40 @@ void toEditExtensions::unquoteBlock(void)
     }
 }
 
+void toEditExtensions::handleCommentLine(int line)
+{
+    QString t(Current->text(line));
+    if (t.startsWith("--"))
+    {
+        Current->setSelection(line, 0, line, 2);
+        Current->removeSelectedText();
+    }
+    else
+        Current->insertAt("--", line, 0);
+}
+
+void toEditExtensions::handleComment()
+{
+    if (!Current)
+        return;
+
+    if (Current->hasSelectedText())
+    {
+        int l, c, l1, c1;
+        Current->getSelection(&l, &c, &l1, &c1);
+        for (int i = l; i <= l1; ++i)
+        {
+            handleCommentLine(i);
+        }
+        Current->setSelection(l, c, l1, c1);
+    }
+    else
+    {
+        int l, c;
+        Current->getCursorPosition(&l, &c);
+        handleCommentLine(l);
+    }
+}
 
 void toEditExtensions::upperCase(void)
 {
@@ -646,6 +708,21 @@ public:
                                         SLOT(lowerCase()));
         LowerCase->setShortcut(Qt::CTRL + Qt::Key_L);
 
+        // bookmark menu
+        BookmarkMenu = edit->addMenu(qApp->translate("toEditExtensionTool", "Bookmarks"));
+        BookmarkSwitchAct = BookmarkMenu->addAction("Add/Remove Bookmark",
+                                                     &EditExtensions,
+                                                     SLOT(bookmarkSwitch()));
+        BookmarkSwitchAct->setShortcut(Qt::CTRL + Qt::Key_B);
+        BookmarkPrevAct = BookmarkMenu->addAction("Go to previous Bookmark",
+                                                    &EditExtensions,
+                                                    SLOT(bookmarkPrev()));
+        BookmarkPrevAct->setShortcut(Qt::ALT + Qt::Key_PageUp);
+        BookmarkNextAct = BookmarkMenu->addAction("Go to next Bookmark",
+                                                    &EditExtensions,
+                                                    SLOT(bookmarkNext()));
+        BookmarkNextAct->setShortcut(Qt::ALT + Qt::Key_PageDown);
+
         // ------------------------------ etc
 
         Indent = edit->addAction(
@@ -668,9 +745,15 @@ public:
                                 SLOT(quoteBlock()));
 
         UnQuote = edit->addAction(qApp->translate("toEditExtensionTool",
-                                  "UnQuote Selection"),
+                                                  "UnQuote Selection"),
                                   &EditExtensions,
                                   SLOT(unquoteBlock()));
+
+        Comment = edit->addAction(qApp->translate("toEditExtensionTool",
+                                                  "Comment or Uncomment"),
+                                  &EditExtensions,
+                                  SLOT(handleComment()),
+                                  Qt::CTRL + Qt::Key_D);
 
         GotoLine = edit->addAction(qApp->translate("toEditExtensionTool",
                                    "Goto Line"),

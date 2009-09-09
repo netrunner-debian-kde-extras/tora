@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -76,6 +76,8 @@ class toSearchReplace;
 class toTool;
 class toToolWidget;
 class toMessage;
+class toDocklet;
+class toDockbar;
 
 
 /** This class defines the main window. Observe that this class will have different baseclass
@@ -105,11 +107,6 @@ private:
      */
     QComboBox *ConnectionSelection;
     /**
-     * Add a new connection. The connection itself must already be created.
-     * Returns the connection or it's duplicate already opened connection.
-     */
-    toConnection *addConnection(toConnection *conn, bool def = true);
-    /**
      * The ID of the tool providing the SQL editor.
      */
     QString SQLEditor;
@@ -138,6 +135,18 @@ private:
     QToolBar *connectionToolbar;
 
     /**
+     * Toolbar for minimizing docklets, left
+     *
+     */
+    toDockbar *leftDockbar;
+
+    /**
+     * Toolbar for minimizing docklets, right
+     *
+     */
+    toDockbar *rightDockbar;
+
+    /**
      * File menu.
      */
     QMenu *fileMenu;
@@ -149,6 +158,10 @@ private:
      * Edit menu.
      */
     QMenu *editMenu;
+    /**
+     * View menu.
+     */
+    QMenu *viewMenu;
     /**
      * Tools menu.
      */
@@ -173,15 +186,15 @@ private:
      * Current row label.
      */
     QLabel *RowLabel;
+
+    //! \brief Display current type of text edit selection (normal/block)
+    QLabel * SelectionLabel;
+
     toBackground Poll;
     /**
      * Search & replace dialog if available.
      */
     toSearchReplace *Search;
-    /**
-     * Default tool
-     */
-    toTool *DefaultTool;
 
     toBackgroundLabel* BackgroundLabel;
 
@@ -234,6 +247,10 @@ private:
     QAction *searchReplaceAct;
     QAction *searchNextAct;
     QAction *selectAllAct;
+#if 0
+// TODO: this part is waiting for QScintilla backend feature (yet unimplemented).
+    QAction *selectBlockAct;
+#endif
     QAction *readAllAct;
     QAction *prefsAct;
     QAction *helpCurrentAct;
@@ -251,6 +268,8 @@ private:
     void createToolbars();
     void createStatusbar();
     void createToolMenus();
+    void createDocklets();
+    void createDockbars();
     //! \brief Sets tools displaying depending on preferences (tabs/windows)
     void handleToolsDisplay();
 
@@ -268,6 +287,11 @@ public:
     QMdiArea *workspace() const
     {
         return Workspace;
+    }
+
+    toSearchReplace * searchDialog()
+    {
+        return Search;
     }
 
     /**
@@ -449,6 +473,12 @@ public:
      */
     void addButtonApplication(QAction *);
 
+    /**
+     * Add a new connection. The connection itself must already be created.
+     * Returns the connection or it's duplicate already opened connection.
+     */
+    toConnection *addConnection(toConnection *conn, bool def = true);
+
 signals:
     /** Invoked to start editing an SQL identifier.
      * @param str Identifier to start editing.
@@ -550,6 +580,26 @@ public slots:
      */
     void removeBusy(void);
 
+    /**
+     * Open a file in sql worksheet
+     *
+     */
+    void editOpenFile(QString file);
+
+    /**
+     * Return the toDockbar that manages the docklet. If none
+     * currently manages the docklet, returns what will if the docklet
+     * is shown.
+     *
+     */
+    toDockbar* dockbar(toDocklet *let);
+
+    /**
+     * Handles moving docklet to new dockbar
+     *
+     */
+    void moveDocklet(toDocklet *let, Qt::DockWidgetArea area);
+
 protected:
     /** intercept close event from parent
      */
@@ -584,6 +634,12 @@ private slots:
      *
      */
     void windowCallback(QAction *action);
+
+    /**
+     * handles callbacks for the view menu
+     *
+     */
+    void viewCallback(QAction *action);
 
     void updateStatusMenu(void);
 

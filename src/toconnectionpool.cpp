@@ -41,10 +41,8 @@
 
 #include "utils.h"
 
-#include "toconf.h"
 #include "toconnectionpool.h"
 #include "tosql.h"
-#include "tothread.h"
 
 #include <QTimer>
 #include <QCoreApplication>
@@ -160,6 +158,11 @@ toConnectionPool::toConnectionPool(toConnection *conn) : QObject(conn) {
 
 toConnectionPool::~toConnectionPool() {
     QMetaObject::invokeMethod(TestThread, "quit", Qt::QueuedConnection);
+#ifdef Q_WS_MAC
+	// This is propably mandatory on Mac. If it's missing, the TestThread->wait()
+	// will block entire GUI for ever.
+	TestThread->quit();
+#endif
     // must call this or the queued call never executes while we wait
     // on the thread. Awesome.
     qApp->processEvents();

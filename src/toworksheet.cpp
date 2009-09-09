@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -65,6 +65,7 @@
 #include "toworksheetstatistic.h"
 #include "toworksheettext.h"
 #include "toeditablemenu.h"
+#include "todescribe.h"
 
 #include <qcheckbox.h>
 #include <qcheckbox.h>
@@ -111,9 +112,6 @@
 #include "icons/toworksheet.xpm"
 #include "icons/up.xpm"
 #include "icons/down.xpm"
-
-// for qsettings
-static const QString SETTINGS = "toWorksheet";
 
 toWorksheetSetup::toWorksheetSetup(toTool *tool, QWidget* parent, const char* name)
         : QWidget(parent), toSettingTab("worksheet.html#preferences"), Tool(tool)
@@ -525,17 +523,7 @@ void toWorksheet::setup(bool autoLoad)
 
     if (autoLoad)
     {
-        Editor->setFilename(toConfigurationSingle::Instance().wsAutoLoad());
-        if (!Editor->filename().isEmpty())
-        {
-            try
-            {
-                QString data = toReadFile(Editor->filename());
-                Editor->setText(QString(data));
-                Editor->setModified(false);
-            }
-            TOCATCH
-        }
+        Editor->editOpen(toConfigurationSingle::Instance().wsAutoLoad());
     }
 
     ToolMenu = NULL;
@@ -578,6 +566,12 @@ void toWorksheet::setup(bool autoLoad)
     list.append(1);
     list.append(0);
     EditSplitter->setSizes(list);
+
+    QSettings s;
+    s.beginGroup("toWorksheet");
+    EditSplitterSizes << s.value("EditSplitterSizes0", 10).toInt();
+    EditSplitterSizes << s.value("EditSplitterSizes1", 1).toInt();
+    s.endGroup();
 
     setCaption();
 }
@@ -656,6 +650,8 @@ void toWorksheet::windowActivated(QMdiSubWindow *widget)
         // disabled. can cause infinite loop on some window systems
         // depending on the timing.
         // Editor->setFocus();
+		if (Editor)
+			Editor->setFocus(Qt::ActiveWindowFocusReason);
 
         // must set correct schema every time so having two worksheets
         // on different schemas works properly.
@@ -773,9 +769,14 @@ bool toWorksheet::close()
     return false;
 }
 
-
 void toWorksheet::closeEvent(QCloseEvent *event)
 {
+    QSettings s;
+    s.beginGroup("toWorksheet");
+    s.setValue("EditSplitterSizes0", EditSplitter->sizes()[0]);
+    s.setValue("EditSplitterSizes1", EditSplitter->sizes()[1]);
+    s.endGroup();
+
     if (close())
         event->accept();
     else
@@ -1300,7 +1301,7 @@ void toWorksheet::execute(toSQLParse::tokenizer &tokens, int line, int pos, exec
         t = t.mid(i);
     }
 
-    if (t.trimmed().length() && EditSplitter)
+    if (t.trimmed().length())
         query(t, type);
 }
 
@@ -1315,13 +1316,8 @@ void toWorksheet::unhideResults(const QString &,
 void toWorksheet::unhideResults()
 {
     // move splitter if currently hidden
-    QList<int> list = EditSplitter->sizes();
-    if (list[1] == 0)
-    {
-        list[0] =  10000;
-        list[1] =  1;
-        EditSplitter->setSizes(list);
-    }
+    if (EditSplitter->sizes()[1] == 0)
+        EditSplitter->setSizes(EditSplitterSizes);
 }
 
 void toWorksheet::execute()
@@ -1640,33 +1636,22 @@ void toWorksheet::describe(void)
 {
     QString owner, table;
     Editor->tableAtCursor(owner, table);
+    if (owner.isNull())
+        owner = Schema->currentText();
 
-    bool toplevel = toConfigurationSingle::Instance().wsToplevelDescribe();
-
-    toResultCols *columns;
-    if (toplevel)
+    if (toConfigurationSingle::Instance().wsToplevelDescribe())
     {
-        columns = new toResultCols(
-            this,
-            "description",
-            Qt::Window);
-
-        QAction *close = new QAction(columns);
-        close->setShortcut(Qt::Key_Escape);
-        connect(close, SIGNAL(triggered()), columns, SLOT(close()));
-        columns->addAction(close);
+        toDescribe * d = new toDescribe(this);
+        d->changeParams(owner, table);
+//         d->show();
     }
     else
     {
-        columns = Columns;
+        unhideResults();
+        Columns->changeParams(owner, table);
         Columns->show();
         Current = Columns;
     }
-
-    if (owner.isNull())
-        owner = Schema->currentText();
-    columns->changeParams(owner, table);
-    columns->show();
 }
 
 void toWorksheet::executeSaved(QAction *act)
@@ -1697,7 +1682,7 @@ void toWorksheet::showSaved()
     SavedMenu->clear();
 
     QSettings settings;
-    settings.beginGroup(SETTINGS);
+    settings.beginGroup("toWorksheet");
 
     QList<QVariant> statements = settings.value("sql").toList();
     QAction *last = 0;
@@ -1714,7 +1699,7 @@ void toWorksheet::showInsertSaved()
     InsertSavedMenu->clear();
 
     QSettings settings;
-    settings.beginGroup(SETTINGS);
+    settings.beginGroup("toWorksheet");
 
     QList<QVariant> statements = settings.value("sql").toList();
     QAction *last = 0;
@@ -1730,7 +1715,7 @@ void toWorksheet::showInsertSaved()
 void toWorksheet::removeSaved(QAction *action)
 {
     QSettings settings;
-    settings.beginGroup(SETTINGS);
+    settings.beginGroup("toWorksheet");
 
     QList<QVariant> statements = settings.value("sql").toList();
     statements.removeAll(action->data().toString());
@@ -1749,7 +1734,7 @@ void toWorksheet::saveLast()
     }
 
     QSettings settings;
-    settings.beginGroup(SETTINGS);
+    settings.beginGroup("toWorksheet");
 
     QString sql = QueryString.trimmed();
     if(!sql.endsWith(";"))

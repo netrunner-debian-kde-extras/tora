@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -62,6 +62,8 @@
 #include <QKeyEvent>
 #include <QPoint>
 
+#include "tosearchreplace.h"
+
 class QMenu;
 class QsciPrinter;
 
@@ -89,6 +91,14 @@ class toMarkedText : public QsciScintilla, public toEditWidget
     int CursorTimerID;
 
     QPoint DragStart;
+
+    Search::SearchDirection m_searchDirection;
+    //! Text to search
+    QString m_searchText;
+    //! Highligh all occurrences of m_searchText QScintilla indicator
+    int m_searchIndicator;
+
+    bool findText(Search::SearchDirection direction);
 
     void searchFound(int line, int col);
     void incrementalSearch(bool forward, bool next);
@@ -160,6 +170,14 @@ public:
         return hasSelectedText();
     }
 
+#if 0
+// TODO: this part is waiting for QScintilla backend feature (yet unimplemented).
+    /*! \brief Set the selection mode for editor.
+    \param aType SC_SEL_STREAM = 0, SC_SEL_RECTANGLE = 1, SC_SEL_LINES = 2
+    */
+    void setSelectionType(int aType=SC_SEL_STREAM);
+#endif
+
     /** Get filename of current file in editor.
      * @return Filename of editor.
      */
@@ -197,19 +215,13 @@ public:
      */
     virtual bool editSave(bool askfile);
 
-    /** Move to top of data
-     */
-    virtual void searchTop(void)
-    {
-        setCursorPosition(0, 0);
-    }
-    /** Search for next entry
-     * @return True if found, should select the found text.
-     */
-    virtual bool searchNext(toSearchReplace *search);
+    virtual bool searchNext(const QString & text);
+    virtual bool searchPrevious(const QString & text);
+
     /** Replace entry with new data
      */
     virtual void searchReplace(const QString &newData);
+    virtual void searchReplaceAll(const QString &newData);
     /** Check if data can be modified by search
      * @param all If true can replace all, otherwise can replace right now.
      */
@@ -240,6 +252,8 @@ signals:
     void displayMenu(QMenu *);
     // emitted when a new file is opened
     void fileOpened(void);
+    void fileOpened(QString file);
+    void fileSaved(QString file);
 
 protected:
     virtual void newLine(void);
@@ -322,6 +336,8 @@ public slots:
 
         QsciScintilla::selectAll();
     }
+
+    void setWordWrap(bool);
 };
 
 #endif

@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -52,94 +52,31 @@
 #include <QAction>
 
 class QComboBox;
-class toTreeWidgetItem;
 class QSplitter;
 class QTabWidget;
+
 class toConnection;
 class toMain;
 class toResultBar;
 class toResultCombo;
 class toResultLock;
 class toResultStats;
-class toSGAStatement;
-class toWaitEvents;
 class toResultTableView;
+class toSGAStatement;
+class toSessionFilter;
+class toTreeWidgetItem;
+class toWaitEvents;
+
 
 #define TO_SESSION_WAIT "toSession:SessionWait"
 #define TO_SESSION_IO   "toSession:SessionIO"
-
-class toSessionList : public toResultLong
-{
-public:
-class sessionFilter : public toResultFilter
-    {
-        struct sessionID
-        {
-            int Session;
-            int Serial;
-            sessionID(int session, int serial)
-            {
-                Session = session;
-                Serial = serial;
-            }
-            bool operator == (const sessionID &ses) const
-            {
-                return Session == ses.Session && Serial == ses.Serial;
-            }
-        };
-        std::list<sessionID> Serials;
-        bool Show;
-        QString OnlyDatabase;
-    public:
-
-        sessionFilter()
-        {
-            Show = true;
-        }
-        sessionFilter(const std::list<sessionID> &serials, bool show)
-        {
-            Serials = serials;
-            Show = show;
-        }
-        virtual bool check(const toTreeWidgetItem *item);
-        virtual toResultFilter *clone(void)
-        {
-            return new sessionFilter(Serials, Show);
-        }
-        void setShow(bool show)
-        {
-            Show = show;
-        }
-        bool show()
-        {
-            return Show;
-        }
-        void onlyDatabase(const QString &db)
-        {
-            OnlyDatabase = db;
-        }
-        void updateList(toResultLong *lst);
-    };
-    toSessionList(QWidget *parent)
-            : toResultLong(false, false, toQuery::Background, parent)
-    {
-        setFilter(new sessionFilter);
-    }
-    virtual toTreeWidgetItem *createItem(toTreeWidgetItem *last, const QString &str);
-    void updateFilter(void);
-    virtual void refresh(void)
-    {
-        updateFilter();
-        toResultLong::refresh();
-    }
-};
 
 class toSession : public toToolWidget
 {
     Q_OBJECT
 
-    toResultLong *Sessions;
-    QTabWidget *ResultTab;
+    toResultTableView *Sessions;
+    QTabWidget        *ResultTab;
 
     QWidget *CurrentTab;
 
@@ -149,21 +86,22 @@ class toSession : public toToolWidget
     toSGAStatement    *PreviousStatement;
     toResultStats     *SessionStatistics;
     toResultLong      *LongOps;
-    toResultLong      *ConnectInfo;
+    toResultTableView *ConnectInfo;
     toResultTableView *LockedObjects;
     toResultLock      *PendingLocks;
-    toResultLong      *AccessedObjects;
+    toResultTableView *AccessedObjects;
     toResultBar       *WaitBar;
     toResultBar       *IOBar;
     toWaitEvents      *Waits;
     QSplitter         *OpenSplitter;
     QSplitter         *StatisticSplitter;
     toSGAStatement    *OpenStatement;
-    toResultLong      *OpenCursors;
+    toResultTableView *OpenCursors;
     QString            LastSession;
     QMenu             *ToolMenu;
     QComboBox         *Refresh;
     QLabel            *Total;
+    toSessionFilter   *SessionFilter;
 
     QAction *refreshAct;
     QAction *enableTimedAct;
@@ -182,8 +120,8 @@ public:
     virtual bool canHandle(toConnection &conn);
 public slots:
     void changeTab(int);
-    void changeItem(toTreeWidgetItem *item);
-    void changeCursor(toTreeWidgetItem *item);
+    void changeItem();
+    void changeCursor();
     void changeRefresh(const QString &str);
     void refresh(void);
     void refreshTabs(void);
@@ -199,9 +137,9 @@ public slots:
     void disconnectSession(void);
     void windowActivated(QMdiSubWindow *widget);
     void done(void);
-    void excludeSelection(bool);
     void selectAll(void);
     void selectNone(void);
+    void filterChanged(const QString &text);
 };
 
 #ifdef TOEXTENDED_MYSQL

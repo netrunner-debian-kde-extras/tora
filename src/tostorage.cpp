@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -1380,7 +1380,9 @@ void toStorage::selectObject(const QModelIndex & current, const QModelIndex &)
     QModelIndex ix = current;
     if (ix.isValid())
     {
-        toStorageExtent::extentTotal ce = ObjectsModel->values().at(ix.row());
+//      toStorageExtent::extentTotal ce = ObjectsModel->values().at(ix.row());
+        toStorageExtent::extentTotal ce = ObjectsModel->values().at(
+                ix.model()->headerData(ix.row(), Qt::Vertical).toInt()-1);
         Extents->highlight(ce.Owner, ce.Table, ce.Partition);
     }
 }
@@ -1408,7 +1410,7 @@ toStorageObjectModel::toStorageObjectModel(QObject * parent)
     : QAbstractTableModel(parent)
 {
     m_values.clear();
-    HeaderData << tr("Owner") << tr("Object") << tr("Partition") << tr("Extents") << tr("Blocks");
+    HeaderData << tr("Owner") << tr("Segment") << tr("Partition") << tr("Extents") << tr("Blocks");
 }
 
 toStorageObjectModel::~toStorageObjectModel()

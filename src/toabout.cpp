@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -115,7 +115,7 @@ static const QString AboutText = QString::fromUtf8(
     "<B>Olof Jönsson</B>,\n"
     "<B>Michael Kaes</B>,\n"
     "<B>Norbert Kiesel</B>,\n"
-    "<B>Pawe=B3 Kucharczyk</B>,\n"
+    "<B>Paweł Kucharczyk</B>,\n"
     "<B>Jacob Lauemølle</B>,\n"
     "<B>Laramie Leavitt</B>,\n"
     "<B>Paolo Magnoli</B>,\n"

@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -42,17 +42,14 @@
 #include <QSettings>
 
 #include "tounittest.h"
-#include "toresultmodel.h"
-#include "toresulttableview.h"
 #include "utils.h"
 #include "tohighlightedtext.h"
 #include "toworksheetwidget.h"
 #include "toeventquery.h"
 #include "toresultcombo.h"
 #include "toresultschema.h"
-#include "toconf.h"
 #include "tochangeconnection.h"
-#include "tooutput.h"
+#include "tocodemodel.h"
 
 #include "icons/unittest.xpm"
 #include "icons/refresh.xpm"
@@ -64,24 +61,28 @@
 #define IN_OUT 4
 #define DATA_LEVEL 5
 #define POSITION 6
-#define DEFAULT_VALUE 7
+//#define DEFAULT_VALUE 7
 
 
 static toSQL SQLPackageParams("toUnitTest:PackageParams",
-                           "select argument_name, data_type, data_length, in_out, data_level, position, default_value\n"
+                           "select distinct argument_name, data_type, data_length,\n"
+                           "        in_out, data_level, position --, default_value\n"
                             "   from all_arguments\n"
                             "   where owner = upper(:f1<char[101]>)\n"
                             "   and object_name = upper(:f2<char[101]>)\n"
                             "   and package_name = upper(:f3<char[101]>)\n"
+                            "   and data_level = 0\n"
                             "   order by position\n",
                            "List PL/SQL package unit parameters.",
                            "0800");
 
 static toSQL SQLUnitParams("toUnitTest:UnitParams",
-                                "select argument_name, data_type, data_length, in_out, data_level, position, default_value\n"
+                                "select distinct argument_name, data_type, data_length,\n"
+                                "        in_out, data_level, position --, default_value\n"
                                 "   from all_arguments\n"
                                 "   where owner = upper(:f1<char[101]>)\n"
                                 "   and object_name = upper(:f2<char[101]>)\n"
+                                "   and data_level = 0\n"
                                 "   order by position\n",
                             "List PL/SQL function or procedure unit parameters.",
                             "0800");
@@ -90,17 +91,10 @@ static toSQL SQLListPackage("toUnitTest:ListPackageMethods",
                            "select distinct object_name as \"Package Members\"\n"
                                    "   from all_arguments\n"
                                    "   where owner = upper(:f1<char[101]>)\n"
-                                   "   and package_name = upper(:f2<char[101]>)",
+                                   "   and package_name = upper(:f2<char[101]>)"
+                                   "order by 1",
                                    "List package procedures and functions",
                             "0800");
-
-static toSQL UnitListCode("toUnitTest:ListCode",
-                          "SELECT Object_Name,Object_Type FROM SYS.ALL_OBJECTS\n"
-                                  " WHERE OWNER = upper(:f1<char[101]>)\n"
-                                  "   AND Object_Type IN ('FUNCTION','PACKAGE',\n"
-                                  "                       'PROCEDURE')\n"
-                                  " ORDER BY Object_Name",
-          "List all PL/SQL codes.", "0800");
 
 
 class toUnitTestTool : public toTool
@@ -158,7 +152,7 @@ toUnitTest::toUnitTest(QWidget * parent, toConnection &connection)
     QLabel * labSchema = new QLabel(tr("Schema") + " ", toolbar);
     toolbar->addWidget(labSchema);
     Schema = new toResultSchema(connection, toolbar,
-                                TO_TOOLBAR_WIDGET_NAME);
+                                "UTresultSchema");
     try
     {
         Schema->refresh();
@@ -168,7 +162,7 @@ toUnitTest::toUnitTest(QWidget * parent, toConnection &connection)
             this, SLOT(changeSchema(const QString &)));
     toolbar->addWidget(Schema);
 
-    new toChangeConnection(toolbar, TO_TOOLBAR_WIDGET_NAME);
+    new toChangeConnection(toolbar, "UTchangeConnection");
 
     splitter = new QSplitter(this);
     splitter->setOrientation(Qt::Horizontal);
@@ -176,10 +170,11 @@ toUnitTest::toUnitTest(QWidget * parent, toConnection &connection)
     codeSplitter = new QSplitter(this);
     codeSplitter->setOrientation(Qt::Horizontal);
 
-    codeList = new toResultTableView(true, false,
-                                     codeSplitter, "codeList");
-    codeList->setSQL(UnitListCode);
-    refreshCodeList();
+    codeList = new QTreeView(splitter);
+    codeModel = new toCodeModel(codeList);
+    codeList->setModel(codeModel);
+    connect(codeList, SIGNAL(doubleClicked(const QModelIndex &)),
+             this, SLOT(changePackage(const QModelIndex &)));
 
     packageList = new toResultTableView(true, false,
                                         codeSplitter, "packageList");
@@ -189,40 +184,29 @@ toUnitTest::toUnitTest(QWidget * parent, toConnection &connection)
     codeSplitter->addWidget(codeList);
     codeSplitter->addWidget(packageList);
 
-    editorSplitter = new QSplitter(this);
-    editorSplitter->setOrientation(Qt::Vertical);
-
-    worksheet = new toWorksheetWidget(editorSplitter,
+    worksheet = new toWorksheetWidget(splitter,
                                       "UTworksheet", connection);
-    output = new toOutput(editorSplitter, connection, true);
-
-    editorSplitter->addWidget(worksheet);
-    editorSplitter->addWidget(output);
 
     splitter->addWidget(codeSplitter);
-    splitter->addWidget(editorSplitter);
+    splitter->addWidget(worksheet);
 
     layout()->addWidget(splitter);
 
     splitter->setChildrenCollapsible(false);
     codeSplitter->setChildrenCollapsible(false);
-    editorSplitter->setChildrenCollapsible(false);
     codeList->setMinimumWidth(200);
     packageList->setMinimumWidth(200);
-    worksheet->setMinimumHeight(200);
-    output->setMinimumHeight(200);
 
     QSettings s;
     s.beginGroup("toUnitTest");
     splitter->restoreState(s.value("splitter", QByteArray()).toByteArray());
     codeSplitter->restoreState(s.value("codeSplitter", QByteArray()).toByteArray());
-    editorSplitter->restoreState(s.value("editorSplitter", QByteArray()).toByteArray());
     s.endGroup();
 
     connect(packageList, SIGNAL(selectionChanged()),
             this, SLOT(packageList_selectionChanged()));
-    connect(codeList, SIGNAL(selectionChanged()),
-            this, SLOT(codeList_selectionChanged()));
+
+    refreshCodeList();
 }
 
 toUnitTest::~toUnitTest()
@@ -231,7 +215,6 @@ toUnitTest::~toUnitTest()
     s.beginGroup("toUnitTest");
     s.setValue("splitter", splitter->saveState());
     s.setValue("codeSplitter", codeSplitter->saveState());
-    s.setValue("editorSplitter", editorSplitter->saveState());
     s.endGroup();
 }
 
@@ -247,23 +230,34 @@ bool toUnitTest::canHandle(toConnection &conn)
 
 void toUnitTest::refreshCodeList()
 {
-    codeList->clearParams();
-    codeList->changeParams(m_owner);
-    codeList->setReadAll(true);
-    codeList->resizeColumnsToContents();
+    if (!Schema->currentText().isEmpty())
+        m_owner = Schema->currentText();
+    else
+        m_owner = connection().user().toUpper();
+    codeModel->refresh(connection(), m_owner);
 }
 
 void toUnitTest::changeSchema(const QString & name)
 {
-    m_name = name;
+    m_owner = name;
     refreshCodeList();
 }
 
-void toUnitTest::codeList_selectionChanged()
+void toUnitTest::changePackage(const QModelIndex &current)
 {
-    m_name = codeList->selectedIndex(1).data(Qt::EditRole).toString();
-    m_type = codeList->selectedIndex(2).data(Qt::EditRole).toString();
+    toBusy busy;
+
     worksheet->editor()->setText("-- select PL/SQL unit, please.");
+
+    toCodeModelItem *item = static_cast<toCodeModelItem*>(current.internalPointer());
+    if (item && item->parent())
+    {
+        m_type = item->parent()->display();
+        if(m_type.isEmpty() || m_type == "Code")
+            return;
+        m_type = m_type.toUpper();
+        m_name = item->display();
+    }
 
     if (m_type == "PACKAGE")
     {
@@ -294,7 +288,6 @@ void toUnitTest::packageList_selectionChanged()
         p.push_back(m_name);
     }
     worksheet->editor()->setText("-- getting the script...");
-    output->disable(false);
     try
     {
         toQuery q(worksheet->toToolWidget::connection(),
@@ -327,6 +320,14 @@ void toUnitTest::handleDone()
     // params declarations
     for (int i = 0; i < m_model->rowCount(); ++i)
     {
+//         res.append("\n");
+//         res.append(QString("-- %1").arg(i) + QString(" arg ") + m_model->data(i, ARGUMENT_NAME).toString());
+//         res.append(QString("-- %1").arg(i) + QString(" lev ") + m_model->data(i, DATA_LEVEL).toString());
+//         res.append(QString("-- %1").arg(i) + QString(" pos ") + m_model->data(i, POSITION).toString());
+//         res.append(QString("-- %1").arg(i) + QString(" typ ") + m_model->data(i, DATA_TYPE).toString());
+//         res.append(QString("-- %1").arg(i) + QString(" len ") + m_model->data(i, DATA_LENGTH).toString());
+//         res.append(QString("-- %1").arg(i) + QString(" i/o ") + m_model->data(i, IN_OUT).toString());
+
         QString t("\t%1 %2(%3); -- %4");
         if (m_model->data(i, ARGUMENT_NAME).isNull()
                   && m_model->data(i, DATA_LEVEL).toInt() == 0
@@ -345,10 +346,21 @@ void toUnitTest::handleDone()
 //             res.append("-- DEBUG " + m_model->data(i, POSITION).toString() + " skipped");
             continue;
         }
-        res.append(t.arg(m_model->data(i, ARGUMENT_NAME).toString())
-                .arg(m_model->data(i, DATA_TYPE).toString().replace("PL/SQL", ""))
-                .arg(m_model->data(i, DATA_LENGTH).toString())
-                .arg(m_model->data(i, IN_OUT).toString()).replace("()", "(22)"));
+        QString item(t.arg(m_model->data(i, ARGUMENT_NAME).toString())
+                      .arg(m_model->data(i, DATA_TYPE).toString().replace("PL/SQL", ""))
+                      .arg(m_model->data(i, DATA_LENGTH).toString())
+                      .arg(m_model->data(i, IN_OUT).toString()));
+        // 1) fixed-length chars should be handled from all_arguments
+        // 2) all other "numeric" and/or pl/sql types should use ()
+        //    or length from all_arguments
+        if (m_model->data(i, DATA_TYPE) == "VARCHAR2"
+            || m_model->data(i, DATA_TYPE) == "VARCHAR"
+            || m_model->data(i, DATA_TYPE) == "NVARCHAR2")
+        {
+            res.append(item.replace("()", "(3000)") + "; 3000 is the dummy size for testing");
+        }
+        else
+            res.append(item.replace("()", ""));
     }
 
     if (!returnClause.isNull())
@@ -362,19 +374,25 @@ void toUnitTest::handleDone()
     // inputs
     for (int i = 0; i < m_model->rowCount(); ++i)
     {
-        QString t("\t%1 := %2;");
-        QString def;
+        QString t("\t%1 := %2; -- %3");
+        QString def("NULL");
         if (m_model->data(i, ARGUMENT_NAME).isNull())
             continue;
-        if (m_model->data(i, DEFAULT_VALUE).isNull())
-            def = "NULL";
-        else
-            def = m_model->data(i, DEFAULT_VALUE).toString();
-        res.append(t.arg(m_model->data(i, ARGUMENT_NAME).toString()).arg(def));
+/*        if (!m_model->data(i, DEFAULT_VALUE).isNull())
+            def = m_model->data(i, DEFAULT_VALUE).toString();*/
+        // skip OUT params
+        if (m_model->data(i, IN_OUT).toString().startsWith("IN"))
+        {
+            res.append(t.arg(m_model->data(i, ARGUMENT_NAME).toString())
+                        .arg(def)
+                        .arg(m_model->data(i, DATA_TYPE).toString()));
+        }
     }
 
     if (!returnClause.isNull())
         res.append("\n\tret :=");
+    else
+        res.append("\n");
 
     if (m_type == "PACKAGE")
         res.append("\t" + m_owner + "." + m_name

@@ -55,12 +55,15 @@
 
 #include <QKeyEvent>
 #include <QVBoxLayout>
-#include <QDesktopWidget>
+#include <QDialogButtonBox>
 #include <QSettings>
 #include <QAbstractItemModel>
 
+#include <cstdio>
+
 #include "icons/commit.xpm"
 #include "icons/copy.xpm"
+#include "icons/wordwrap.xpm"
 #include "icons/cut.xpm"
 #include "icons/fileopen.xpm"
 #include "icons/filesave.xpm"
@@ -136,9 +139,6 @@ toModelEditor::toModelEditor(QWidget *parent,
                                            Model(model)
 {
     setModal(modal);
-    setMinimumSize(400, 300);
-    QDesktopWidget *paramDesktop = new QDesktopWidget;
-    setMaximumWidth(paramDesktop->availableGeometry(this).width()*2 / 3);
 
     setWindowTitle("Memo Editor");
 
@@ -159,6 +159,10 @@ toModelEditor::toModelEditor(QWidget *parent,
     Editable = Model->flags(Current) & Qt::ItemIsEditable;
     Editor->setReadOnly(!Editable);
     Editor->setFocus();
+
+    QDialogButtonBox * buttonBox = new QDialogButtonBox(QDialogButtonBox::Close, Qt::Horizontal, this);
+    vbox->addWidget(buttonBox);
+    connect(buttonBox, SIGNAL(rejected()), this, SLOT(close()));
 
     if (Editable)
     {
@@ -212,6 +216,13 @@ toModelEditor::toModelEditor(QWidget *parent,
             act,
             SLOT(setEnabled(bool)));
     act->setEnabled(false);
+
+    QAction * WordWrapAct = new QAction(QIcon(QPixmap(const_cast<const char**>(wordwrap_xpm))),
+                                         tr("Word Wrap"), Toolbar);
+    WordWrapAct->setCheckable(true);
+    connect(WordWrapAct, SIGNAL(toggled(bool)),
+             Editor, SLOT(setWordWrap(bool)));
+             Toolbar->addAction(WordWrapAct);
 
     if (Editable)
     {

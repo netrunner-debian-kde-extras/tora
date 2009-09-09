@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -175,6 +175,13 @@ signals:
      *
      */
     void done();
+
+
+    /**
+     * Emitted if query.rowsProcessed() > 0. Number of affected rows.
+     *
+     */
+    void rowsProcessed(int rows);
 };
 
 #endif

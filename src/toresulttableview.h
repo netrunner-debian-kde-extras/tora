@@ -50,20 +50,50 @@
 #include "toresultmodel.h"
 #include "toeditwidget.h"
 
-#include <QObject>
 #include <QAbstractTableModel>
-#include <QTableView>
-#include <QModelIndex>
-#include <QList>
 #include <QHeaderView>
-#include <QMenu>
+#include <QItemDelegate>
 #include <QLabel>
+#include <QList>
+#include <QMenu>
+#include <QModelIndex>
+#include <QObject>
 #include <QPushButton>
+#include <QTableView>
 
 class toResultStats;
 class toViewFilter;
 class toTableViewIterator;
 class toWorkingWidget;
+class toExportSettings;
+
+
+/**
+ * This is a simple class for providing sensible size hints to the
+ * view.
+ *
+ */
+class toResultTableViewDelegate : public QItemDelegate
+{
+    static const int maxWidth = 200; // the maximum size to grow a column
+
+public:
+    toResultTableViewDelegate(QObject *parent = 0)
+            : QItemDelegate(parent)
+    {
+    }
+
+
+    virtual QSize sizeHint(const QStyleOptionViewItem &option,
+                           const QModelIndex &index) const
+    {
+        QSize size = QItemDelegate::sizeHint(option, index);
+        if (size.width() > maxWidth)
+            size.setWidth(maxWidth);
+
+        return size;
+    }
+};
 
 
 class toResultTableView : public QTableView,
@@ -83,6 +113,9 @@ class toResultTableView : public QTableView,
 
     // if column headers should be modified to be readable
     bool ReadableColumns;
+
+    // number of visible columns
+    int VisibleColumns;
 
     // if vertical header should be displayed
     bool NumberColumn;
@@ -111,8 +144,7 @@ class toResultTableView : public QTableView,
     QAction *rightAct;
     QAction *centerAct;
     QAction *copyAct;
-    QAction *copySelAct;
-    QAction *copyHeadAct;
+    QAction *copyFormatAct;
     QAction *copyTransAct;
     QAction *selectAllAct;
     QAction *exportAct;
@@ -122,8 +154,10 @@ class toResultTableView : public QTableView,
 
     void createActions(void);
 
-    // use Filter to hide rows
-    void applyFilter(void);
+    /*! \brief Common setup function called from constructors
+    */
+    void setup(bool readable, bool numberColumn, bool editable);
+
 
 protected slots:
     void displayMenu(const QPoint &pos);
@@ -160,6 +194,18 @@ protected:
      *
      */
     virtual void paintEvent(QPaintEvent *event);
+
+
+    /**
+     * Overrides QWidget to resize columns when applicable.
+     *
+     */
+    virtual void resizeEvent(QResizeEvent *event);
+
+    /*! Catch special keyboard shortcuts.
+        Copy, etc.
+    */
+    virtual void keyPressEvent(QKeyEvent * event);
 
 signals:
 
@@ -198,8 +244,16 @@ public:
                       QWidget *parent,
                       const char *name = 0,
                       bool editable = false);
+    /*! \brief Constructor provided for Qt designer. See setup()
+    */
+    toResultTableView(QWidget * parent = 0);
     virtual ~toResultTableView(void);
 
+    virtual bool searchNext(const QString & text);
+    virtual bool searchPrevious(const QString & text);
+    virtual void searchReplace(const QString & text) {};
+    virtual void searchReplaceAll(const QString & text) {};
+    virtual bool searchCanReplace(bool all) { return false; };
 
     /**
      * Reimplemented to create query and new model.
@@ -238,7 +292,6 @@ public:
         return Model;
     }
 
-
     /**
      * True if query is running.
      *
@@ -272,10 +325,7 @@ public:
      *
      * @param filter The new filter or NULL if no filter is to be used.
      */
-    void setFilter(toViewFilter *filter)
-    {
-        Filter = filter;
-    }
+    void setFilter(toViewFilter *filter);
 
 
     /**
@@ -326,28 +376,10 @@ public:
 
 
     /**
-     * Helper function to display a toResultListFormat.
-     *
-     * @param separator
-     * @param delimiter
-     */
-    virtual int exportType(QString &separator, QString &delimiter);
-
-
-    /**
      * Export list as a string.
      *
-     * @param includeHeader Include header.
-     * @param onlySelection Only include selection.
-     * @param type Format of exported list.
-     * @param separator Separator for CSV format.
-     * @param delimiter Delimiter for CSV format.
      */
-    QString exportAsText(bool includeHeader,
-                         bool onlySelection,
-                         int type,
-                         QString &separator,
-                         QString &delimiter);
+    QString exportAsText(toExportSettings settings);
 
 
     // ---------------------------------------- overrides toEditWidget
@@ -417,6 +449,14 @@ public slots:
         if (Model)
             Model->stop();
     }
+
+
+    /**
+     * apply Filter to row visibility
+     *
+     */
+    void applyFilter(void);
+
 
 signals:
 

@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -65,6 +65,7 @@ class toResultCols;
 class toResultView;
 class toSQL;
 class toSearchReplace;
+class toExportSettings;
 
 /** Baseclass for filters to apply to the @ref toResultView to filter
  * out rows that you don't want to add as items to the list.
@@ -509,8 +510,6 @@ class toListView : public toTreeWidget, public toEditWidget
 {
     Q_OBJECT;
 
-    bool FirstSearch;
-
     /**
      * Name of this list, used primarily when printing. Also used to
      * be able to edit
@@ -565,15 +564,8 @@ class toListView : public toTreeWidget, public toEditWidget
         bool paint = true);
 #endif
 
-    int exportType(QString &separator, QString &delimiter);
-
     QString owner;
     QString objectName;
-
-    bool    includeHeader;
-    bool    onlySelection;
-    QString sep;
-    QString del;
 
 protected:
     /**
@@ -586,30 +578,13 @@ protected:
     QAction *rightAct;
     QAction *centerAct;
     QAction *copyAct;
-    QAction *copySelAct;
-    QAction *copyHeadAct;
+    QAction *copyFormatAct;
     QAction *copyTransAct;
     QAction *selectAllAct;
     QAction *exportAct;
     QAction *editAct;
 
 public:
-    bool getIncludeHeader()
-    {
-        return includeHeader;
-    }
-    bool getOnlySelection()
-    {
-        return onlySelection;
-    }
-    QString getSep()
-    {
-        return sep;
-    }
-    QString getDel()
-    {
-        return del;
-    }
 
     /** Create new list view.
      * @param parent Parent of list.
@@ -689,18 +664,8 @@ public:
      */
     virtual void addMenues(QMenu *menu);
     /** Export list as a string.
-     * @param includeHeader Include header.
-     * @param onlySelection Only include selection.
-     * @param type Format of exported list.
-     * @param separator Separator for CSV format.
-     * @param delimiter Delimiter for CSV format.
      */
-    virtual QString exportAsText(
-        bool includeHeader,
-        bool onlySelection,
-        int type = -1,
-        const QString &separator = ";",
-        const QString &delimiter = "\"");
+    virtual QString exportAsText(toExportSettings settings);
     /** Export list as file.
      */
     virtual bool editSave(bool ask);
@@ -712,22 +677,14 @@ public:
         selectAll(true);
     }
 
-    /** Move to top of data
-     */
-    virtual void searchTop(void)
-    {
-        if (firstChild())
-            setCurrentItem(firstChild());
-        FirstSearch = true;
-    }
     /** Search for next entry
      * @return True if found, should select the found text.
      */
-    virtual bool searchNext(toSearchReplace *search);
-    /** Check if data can be modified by search
-     * @param all If true can replace all, otherwise can replace right now.
-     */
-    virtual bool searchCanReplace(bool all);
+    virtual bool searchNext(const QString & text);
+    virtual bool searchPrevious(const QString & text);
+    virtual void searchReplace(const QString & text) {};
+    virtual void searchReplaceAll(const QString & text) {};
+    virtual bool searchCanReplace(bool all) { return false; };
 
     /** Export data to a map.
      * @param data A map that can be used to recreate the data of a chart.

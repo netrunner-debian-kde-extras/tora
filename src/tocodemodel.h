@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -45,7 +45,6 @@
 #include <QAbstractItemModel>
 #include <QModelIndex>
 #include <QVariant>
-#include <QTreeWidgetItem>
 
 #include "config.h"
 #include "toconnection.h"
@@ -53,9 +52,60 @@
 class toEventQuery;
 
 
+/*! \brief A leaf item for toCodeModel.
+It displays one item in the tree structure of the code model.
+*/
+class toCodeModelItem
+{
+public:
+    /*!
+    \param parent a parent item. When it's 0, it's a root one.
+    \param display a text to display - item caption or object name
+    \param type item type. "NULL" for headers and non-db items.
+                and e.g. "PROCEDURE" for procedures. See its toSQL.
+    \param status a (in)valid state of the DB object. Use "VALID" for
+                  non-db items.
+    */
+    toCodeModelItem(
+             toCodeModelItem *parent = 0,
+             const QString & display = 0,
+             const QString & type = "NULL",
+             const QString & status = "VALID"
+             );
+    ~toCodeModelItem();
+
+    /*! \brief It appends a child to the tree for this item.
+    \warning Do not call this method if you provide
+    a parent in constructor!
+    */
+    void appendChild(toCodeModelItem *child);
+
+    toCodeModelItem *child(int row);
+    int childCount() const;
+    int columnCount() const;
+    int row() const;
+    toCodeModelItem *parent();
+
+    //! Object name
+    QString display() const;
+    //! Object type
+    QString type() const;
+    //! Object status (validity)
+    QString status() const;
+    void setStatus(const QString & s);
+
+private:
+    QList<toCodeModelItem*> childItems;
+    QString itemDisplay;
+    QString itemType;
+    QString itemStatus;
+    toCodeModelItem *parentItem;
+};
+
+
+
 /*! \brief A tree model for QTreeView used in the sql editor and sql
- *  debugger tools.
- *
+ *  debugger tools and toBrowser as well.
  */
 class toCodeModel : public QAbstractItemModel
 {
@@ -81,6 +131,12 @@ public:
      */
     void refresh(toConnection &conn, const QString &owner);
 
+public slots:
+    void addChildContent(const QModelIndex & index);
+
+signals:
+    void dataReady();
+
 private slots:
     void cleanup(void);
     void readData(void);
@@ -88,11 +144,13 @@ private slots:
 
 private:
     //! An universal root item. It's deleted and recreated in setupModelData()
-    QTreeWidgetItem *rootItem;
-    QTreeWidgetItem *packageItem;
-    QTreeWidgetItem *procItem;
-    QTreeWidgetItem *typeItem;
+    toCodeModelItem *rootItem;
+    toCodeModelItem *packageItem;
+    toCodeModelItem *procItem;
+    toCodeModelItem *funcItem;
+    toCodeModelItem *typeItem;
     toEventQuery    *query;
+    QString m_owner;
 };
 
 #endif

@@ -58,6 +58,10 @@
 #include "totool.h"
 #include "tomessage.h"
 #include "tothread.h"
+#include "todocklet.h"
+#include "todockbar.h"
+#include "toworksheet.h"
+#include "tohighlightedtext.h"
 
 #include <qapplication.h>
 #include <qcombobox.h>
@@ -128,6 +132,8 @@ toMain::toMain()
 
     createToolMenus();
 
+    createDocklets();
+
     handleToolsDisplay();
 
     updateRecent();
@@ -149,16 +155,14 @@ toMain::toMain()
     std::map<QString, toTool *> &tools = toTool::tools();
 
     QString defName(toConfigurationSingle::Instance().defaultTool());
-    DefaultTool = NULL;
     for (std::map<QString, toTool *>::iterator k = tools.begin();
-            k != tools.end();
-            k++)
+         k != tools.end();
+         k++)
     {
-        if(defName.isEmpty() || defName == (*k).first) {
-            DefaultTool = (*k).second;
+        if(defName.isEmpty()) {
+            toConfigurationSingle::Instance().setDefaultTool((*k).first);
             defName = (*k).first;
         }
-
         (*k).second->customSetup();
     }
     Search = NULL;
@@ -188,13 +192,11 @@ toMain::toMain()
         TOCATCH;
     }
 
-//     if (toConfigurationSingle::Instance().maximizeMain() && Connections.empty())
-//         showMaximized();
-//     else
-//         show();
     setCentralWidget(Workspace);
 
     show();
+
+    createDockbars();           // keep after restoreState() and show()
 
     statusBar()->addPermanentWidget(BackgroundLabel, 0);
     BackgroundLabel->show();
@@ -347,6 +349,13 @@ void toMain::createActions()
     selectAllAct = new QAction(tr("Select &All"), this);
     selectAllAct->setShortcut(QKeySequence::SelectAll);
 
+#if 0
+    // TODO: this part is waiting for QScintilla backend feature (yet unimplemented).
+    selectBlockAct = new QAction(tr("Block Selection"), this);
+    selectBlockAct->setShortcut(Qt::CTRL + Qt::SHIFT + Qt::Key_B);
+    selectBlockAct->setCheckable(true);
+#endif
+
     readAllAct = new QAction(tr("Read All &Items"), this);
 
     prefsAct = new QAction(tr("&Preferences..."), this);
@@ -436,6 +445,10 @@ void toMain::createMenus()
     editMenu->addAction(searchReplaceAct);
     editMenu->addAction(searchNextAct);
     editMenu->addAction(selectAllAct);
+#if 0
+// TODO: this part is waiting for QScintilla backend feature (yet unimplemented).
+    editMenu->addAction(selectBlockAct);
+#endif
     editMenu->addAction(readAllAct);
     editMenu->addSeparator();
 
@@ -444,6 +457,20 @@ void toMain::createMenus()
             SIGNAL(triggered(QAction *)),
             this,
             SLOT(commandCallback(QAction *)),
+            Qt::QueuedConnection);
+
+    viewMenu = menuBar()->addMenu(tr("&View"));
+    foreach(toDocklet *let, toDocklet::docklets())
+    {
+        viewMenu->addAction(new QAction(let->icon(),
+                                        let->name(),
+                                        0));
+    }
+
+    connect(viewMenu,
+            SIGNAL(triggered(QAction *)),
+            this,
+            SLOT(viewCallback(QAction *)),
             Qt::QueuedConnection);
 
     toolsMenu = menuBar()->addMenu(tr("&Tools"));
@@ -536,11 +563,9 @@ void toMain::createToolbars()
 
     toolsToolbar = toAllocBar(this, tr("Tools"));
     toolsToolbar->setObjectName("toolsToolbar");
-
-    addToolBarBreak();
 }
 
-//! \warning Do not use it. It screw realoading of the state of toolbars
+//! \warning Do not use it. It screws up reloading the toolbar state
 void toMain::addButtonApplication(QAction *act)
 {
     editToolbar->addAction(act);
@@ -550,6 +575,14 @@ void toMain::addButtonApplication(QAction *act)
 void toMain::createStatusbar()
 {
     statusBar()->showMessage(QString::null);
+
+#if 0
+// TODO: this part is waiting for QScintilla backend feature (yet unimplemented).
+    SelectionLabel = new QLabel(statusBar());
+    statusBar()->addPermanentWidget(SelectionLabel);
+    SelectionLabel->setMinimumWidth(90);
+    SelectionLabel->setText("Sel: Normal");
+#endif
 
     RowLabel = new QLabel(statusBar());
     statusBar()->addPermanentWidget(RowLabel, 0);
@@ -642,6 +675,50 @@ void toMain::createToolMenus()
     TOCATCH;
 }
 
+
+void toMain::createDocklets()
+{
+    foreach(toDocklet *let, toDocklet::docklets())
+        addDockWidget(Qt::LeftDockWidgetArea, let);
+}
+
+
+// must call this after restoreState()
+
+void toMain::createDockbars()
+{
+    leftDockbar = new toDockbar(Qt::LeftToolBarArea,
+                                tr("Left Dockbar"),
+                                this);
+    addToolBar(Qt::LeftToolBarArea, leftDockbar);
+    leftDockbar->hide();
+
+    rightDockbar = new toDockbar(Qt::RightToolBarArea,
+                                tr("Right Dockbar"),
+                                this);
+    addToolBar(Qt::RightToolBarArea, rightDockbar);
+    rightDockbar->hide();
+
+    // toDockbar keeps it's own settings, but just in case something
+    // goes wrong, or a new setup, add any visible docklets to the
+    // dockbar.
+
+    foreach(toDocklet *let, toDocklet::docklets())
+    {
+        if(let->isVisible())
+            moveDocklet(let, dockWidgetArea(let));
+
+        connect(let,
+                SIGNAL(dockletLocationChanged(toDocklet *, Qt::DockWidgetArea)),
+                this,
+                SLOT(moveDocklet(toDocklet *, Qt::DockWidgetArea)));
+    }
+
+    leftDockbar->restoreState(toConfigurationSingle::Instance().leftDockbarState());
+    rightDockbar->restoreState(toConfigurationSingle::Instance().rightDockbarState());
+}
+
+
 void toMain::handleToolsDisplay()
 {
 #if QT_VERSION >= 0x040400
@@ -706,15 +783,17 @@ void toMain::updateRecent()
     recentMenu->clear();
 
     int index = 1;
-    QList<QString>::iterator i = files.end();
-    while(i != files.begin())
+    QMutableListIterator<QString> i(files);
+    i.toBack();
+    QString f;
+    while (i.hasPrevious())
     {
-        i--;
+        f = i.previous();
 
-        QFileInfo fi(*i);
+        QFileInfo fi(f);
         if (!fi.exists())
         {
-            files.removeAt(files.indexOf(*i));
+            i.remove();
             continue;
         }
 
@@ -726,7 +805,7 @@ void toMain::updateRecent()
             caption = "&" + QString::number(index++) + "  " + caption;
 
         QAction *r = new QAction(caption, this);
-        r->setToolTip(*i);
+        r->setToolTip(f);
         recentMenu->addAction(r);
     }
 
@@ -849,6 +928,49 @@ void toMain::statusCallback(QAction *action)
 }
 
 
+void toMain::viewCallback(QAction *action)
+{
+    toDocklet *let = toDocklet::docklet(action->text());
+    if(!let)
+        return;
+
+    let->close();
+    if(leftDockbar->contains(let))
+    {
+        leftDockbar->removeDocklet(let);
+        return;
+    }
+    if(rightDockbar->contains(let))
+    {
+        rightDockbar->removeDocklet(let);
+        return;
+    }
+
+    addDockWidget(Qt::LeftDockWidgetArea, let);
+#if QT_VERSION >= 0x040400
+    restoreDockWidget(let);
+#else
+    let->show();
+#endif
+}
+
+
+void toMain::moveDocklet(toDocklet *let, Qt::DockWidgetArea area)
+{
+    if(area == Qt::RightDockWidgetArea)
+    {
+        leftDockbar->removeDocklet(let);
+        rightDockbar->addDocklet(let);
+    }
+
+    if(area == Qt::LeftDockWidgetArea)
+    {
+        rightDockbar->removeDocklet(let);
+        leftDockbar->addDocklet(let);
+    }
+}
+
+
 void toMain::commandCallback(QAction *action)
 {
     QWidget *focus = qApp->focusWidget();
@@ -885,13 +1007,35 @@ void toMain::commandCallback(QAction *action)
             edit->editCut();
         else if (action == selectAllAct)
             edit->editSelectAll();
+#if 0
+// TODO: this part is waiting for QScintilla backend feature (yet unimplemented).
+        else if (action == selectBlockAct)
+        {
+            // OK, this looks ugly but it's pretty functional.
+            // Here I need to setup chosen selection type for
+            // all QScintilla based editors.
+            int selectionType = action->isChecked()
+                                    ? QsciScintillaBase::SC_SEL_RECTANGLE
+                                    : QsciScintillaBase::SC_SEL_STREAM;
+            foreach (QWidget * i, QApplication::allWidgets())
+            {
+                toMarkedText * w = qobject_cast<toMarkedText*>(i);
+                if (w)
+                {
+                    w->setSelectionType(selectionType);
+                    qDebug() << "setting" << w << selectionType;
+                }
+            }
+            SelectionLabel->setText(action->isChecked() ? "Sel: Block" : "Sel: Normal");
+        }
+#endif
         else if (action == refreshAct)
             edit->editReadAll();
         else if (action == searchReplaceAct)
         {
             if (!Search)
                 Search = new toSearchReplace(this);
-            Search->show();
+            Search->isVisible() ? Search->hide() : Search->show();
         }
         else if (action == searchNextAct)
         {
@@ -954,11 +1098,6 @@ void toMain::commandCallback(QAction *action)
         ConnectionSelection->setFocus();
     else if (action == quitAct)
         close();
-    else if (action == searchReplaceAct)
-    {
-        if (Search)
-            Search->searchNext();
-    }
     else if (action == cascadeAct)
         workspace()->cascadeSubWindows();
     else if (action == tileAct)
@@ -1390,6 +1529,9 @@ void toMain::closeEvent(QCloseEvent *event)
     toConfigurationSingle::Instance().setMainWindowGeometry(saveGeometry());
     toConfigurationSingle::Instance().setMainWindowState(saveState());
 
+    toConfigurationSingle::Instance().setLeftDockbarState(leftDockbar->saveState());
+    toConfigurationSingle::Instance().setRightDockbarState(rightDockbar->saveState());
+
     toConfigurationSingle::Instance().saveConfig();
     event->accept();
 }
@@ -1402,6 +1544,20 @@ bool toMain::close()
 
 void toMain::createDefault(void)
 {
+    std::map<QString, toTool *> &tools = toTool::tools();
+
+    QString defName(toConfigurationSingle::Instance().defaultTool());
+    toTool *DefaultTool = NULL;
+    for (std::map<QString, toTool *>::iterator k = tools.begin();
+            k != tools.end();
+            k++)
+    {
+        if(defName.isEmpty() || defName == (*k).first) {
+            DefaultTool = (*k).second;
+            break;
+        }
+    }
+
     if (DefaultTool)
         DefaultTool->createWindow();
 }
@@ -1462,11 +1618,54 @@ void toMain::removeBusy() {
 }
 
 
+void toMain::editOpenFile(QString file) {
+    toWorksheet *sheet = 0;
+    if(Edit)
+        sheet = dynamic_cast<toWorksheet *>(Edit);
+
+    // the only fscking way to find the tool on top, regardless of
+    // what's got focus or whatever.  this is called from docklets
+    // which usually have focus. though, manually setting focus on
+    // Workspace doesn't help either.
+    if(!Workspace->subWindowList().isEmpty())
+    {
+        QMdiSubWindow *sub = Workspace->subWindowList(QMdiArea::StackingOrder).last();
+        if(!sheet && sub)
+            sheet = dynamic_cast<toWorksheet *>(sub->widget());
+    }
+
+    if(!sheet) {
+        toTool *tool = toTool::tool("00010SQL Editor");
+        if(tool) {
+            QWidget *win = tool->createWindow();
+            if(win)
+                sheet = dynamic_cast<toWorksheet *>(win);
+        }
+        else
+            printf("Couldn't find sql worksheet.\n");
+    }
+
+    if(!sheet)
+        return;
+
+    sheet->editor()->editOpen(file);
+    sheet->setFocus();
+}
+
+
+toDockbar* toMain::dockbar(toDocklet *let)
+{
+    if(rightDockbar->contains(let))
+        return rightDockbar;
+    return leftDockbar;
+}
+
+
 void toMain::showMessage(const QString &str, bool save, bool log)
 {
-    // this function can be called from any thread.
-    // this tomain class is in the main (gui) thread, so emitting
-    // a signal with a queued flag will be picked up in the main
+    // this function can be called from any thread.  this tomain
+    // instance is always in the main (gui) thread, so emitting a
+    // signal with a queued flag will be picked up in the main
     // thread. otherwise tora crashes.
     emit messageRequested(str, save, log);
 }
@@ -1518,19 +1717,22 @@ void toMain::exportData(std::map<QString, QString> &data, const QString &prefix)
 {
     try
     {
-        if (isMaximized())
-            data[prefix + ":State"] = QString::fromLatin1("Maximized");
-        else if (isMinimized())
-            data[prefix + ":State"] = QString::fromLatin1("Minimized");
-        else
-        {
-            QRect rect = geometry();
-            data[prefix + ":X"] = QString::number(rect.x());
-            data[prefix + ":Y"] = QString::number(rect.y());
-            data[prefix + ":Width"] = QString::number(rect.width());
-            data[prefix + ":Height"] = QString::number(rect.height());
-        }
 
+#if 0
+// No need to do it. We are storing it in QSettings now
+//         if (isMaximized())
+//             data[prefix + ":State"] = QString::fromLatin1("Maximized");
+//         else if (isMinimized())
+//             data[prefix + ":State"] = QString::fromLatin1("Minimized");
+//         else
+//         {
+//             QRect rect = geometry();
+//             data[prefix + ":X"] = QString::number(rect.x());
+//             data[prefix + ":Y"] = QString::number(rect.y());
+//             data[prefix + ":Width"] = QString::number(rect.width());
+//             data[prefix + ":Height"] = QString::number(rect.height());
+//         }
+#endif
         int id = 1;
         std::map<toConnection *, int> connMap;
         {

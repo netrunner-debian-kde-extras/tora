@@ -7,7 +7,7 @@
  * 
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
- * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ * Portions Copyright (C) 2004-2009 Numerous Other Contributors
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -143,7 +143,7 @@ public:
      * Returns the data stored under the given role for the item
      * referred to by the index.
      */
-    virtual QVariant data(const QModelIndex &index, int role) const;
+    virtual QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
 
 
     /**

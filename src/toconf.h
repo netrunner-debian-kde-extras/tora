@@ -82,7 +82,7 @@
 #define CONF_CACHE_DISK  "CacheDiskUse"
 #define DEFAULT_CACHE_DISK true
 #define CONF_SQL_FILE  "SQLDictionary"
-#define DEFAULT_SQL_FILE "$HOME/.torasql"
+#define DEFAULT_SQL_FILE ".torasql"
 #define CONF_STATUS_MESSAGE     "StatusMessage"
 #define DEFAULT_STATUS_MESSAGE  "5"
 #define CONF_DB_TITLE  "DBTitle"
@@ -116,10 +116,11 @@
 #define CONF_FIREWALL_MODE "FirewallMode"
 #define CONF_MAX_CONTENT "MaxContent"
 #define DEFAULT_MAX_CONTENT 100
-#define CONF_KEEP_PLANS  "KeepPlans"
+#define CONF_KEEP_PLANS  "KeepPlans" // default: false
+#define CONF_VSQL_PLANS  "VSqlPlans"    // default: true
 #define CONF_RESTORE_SESSION "RestoreSession"
 #define CONF_DEFAULT_SESSION "DefaultSession"
-#define DEFAULT_SESSION  "$HOME/.tora.tse"
+#define DEFAULT_SESSION  ".tora.tse"
 #define CONF_DEFAULT_FORMAT "DefaultFormat"
 #define CONF_CSV_SEPARATOR "CSVSeparator"
 #define DEFAULT_CSV_SEPARATOR ";"
@@ -158,7 +159,7 @@
 #define CONF_SMTP_PORT "SmtpServerPort"
 #define DEFAULT_SMTP_PORT 25
 #define CONF_STYLE  "Style"
-#define DEFAULT_STYLE "Cleanlooks"
+#define DEFAULT_STYLE "" //"Cleanlooks"
 // tooracleconnection.cpp
 #define CONF_OPEN_CURSORS "OpenCursors"
 #define DEFAULT_OPEN_CURSORS 40  // Defined to be able to update tuning view
@@ -166,6 +167,9 @@
 #ifndef DEFAULT_MAX_LONG
 #define DEFAULT_MAX_LONG 30000
 #endif
+// tonewconnection
+#define CONF_PROVIDER_LIST_SORT_OFFSET "ProvListSort" //Sort by database/connection name, asc
+#define DEFAULT_PROVIDER_LIST_SORT_OFFSET 4 
 // tosqlconnection
 #define CONF_ONLY_FORWARD "OnlyForward"
 #define DEFAULT_ONLY_FORWARD true

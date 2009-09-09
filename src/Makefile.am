@@ -53,6 +53,7 @@ tora_SOURCES=main.cpp \
 	toqvalue.cpp toqvalue.h \
 	toconnectionimport.cpp toconnectionimport.h \
 	toconnectionpool.cpp toconnectionpool.h \
+    todescribe.cpp todescribe.h \
 	torunnable.cpp torunnable.h \
 	toeditwidget.cpp toeditwidget.h \
 	toglobalsetting.cpp toglobalsetting.h \
@@ -110,6 +111,11 @@ tora_SOURCES=main.cpp \
 	tobackup.cpp tobackup.h \
 	tobackuptool.cpp tobackuptool.h \
 	tobrowser.cpp tobrowser.h  \
+	todocklet.cpp todocklet.h  \
+	todockbar.cpp todockbar.h  \
+	topushbutton.cpp topushbutton.h  \
+	docklets/toviewdirectory.cpp docklets/toviewdirectory.h  \
+	docklets/toviewconnections.cpp docklets/toviewconnections.h  \
 	tobarchart.cpp tobarchart.h  \
 	tocurrent.cpp tocurrent.h \
 	todebug.cpp todebug.h  \
@@ -177,9 +183,23 @@ tora_SOURCES=main.cpp \
 	tovisualize.cpp tovisualize.h  \
 	towaitevents.cpp towaitevents.h \
 	toconnectionmodel.cpp toconnectionmodel.h \
+    tobrowserbasewidget.cpp tobrowserbasewidget.h \
+    tobrowseraccesswidget.cpp tobrowseraccesswidget.h \
+    tobrowsertablewidget.cpp tobrowsertablewidget.h \
+    tobrowserviewwidget.cpp tobrowserviewwidget.h \
+    tobrowserindexwidget.cpp tobrowserindexwidget.h \
+    tobrowserschemawidget.cpp tobrowserschemawidget.h \
+    tobrowsersequencewidget.cpp tobrowsersequencewidget.h \
+    tobrowsersynonymwidget.cpp tobrowsersynonymwidget.h \
+    tobrowsercodewidget.cpp tobrowsercodewidget.h \
+    tobrowsertriggerwidget.cpp tobrowsertriggerwidget.h \
+    tobrowserdblinkswidget.cpp tobrowserdblinkswidget.h \
+    toresultgrants.cpp toresultgrants.h \
 	migratetool/sqldeveloper.cpp migratetool/sqldeveloper.h \
 	migratetool/squirrelsql.cpp migratetool/squirrelsql.h \
 	migratetool/tora3.cpp migratetool/tora3.h \
+	shortcuteditor/shortcuteditordialog.cpp shortcuteditor/shortcuteditordialog.h \
+	shortcuteditor/shortcutmodel.cpp shortcuteditor/shortcutmodel.h \
 	$(EXTRA_ORACLE_MONO_SOURCE) \
 	$(LOKIDIR_SRC)/SmallObj.cpp \
 	$(LOKIDIR_SRC)/Singleton.cpp \
@@ -192,6 +212,7 @@ UI_FILES = toaboutui.ui \
 		tobrowserindexui.ui \
 		tobrowsertableui.ui \
 		toconnectionimportui.ui \
+        todescribeui.ui \
 		tooraclesettingui.ui \
 		tostoragetablespaceui.ui \
 		tochartalarmui.ui \
@@ -231,7 +252,8 @@ UI_FILES = toaboutui.ui \
 		tonewconnectionui.ui \
 		tostorageprefsui.ui \
 		todroptablespaceui.ui \
-		toscriptschemawidgetui.ui
+		toscriptschemawidgetui.ui \
+		shortcuteditor/shortcuteditordialog.ui
 
 
 EXTRA_DIST = icons \
@@ -288,6 +310,7 @@ BUILT_SOURCES = \
 	moc_tocodemodel.cpp \
 	moc_toconnectionpool.cpp \
 	moc_toconnectionimport.cpp \
+	moc_todescribe.cpp \
 	moc_torunnable.cpp \
 	moc_tonoblockquery.cpp \
 	moc_toeventquery.cpp \
@@ -377,11 +400,31 @@ BUILT_SOURCES = \
 	moc_toscriptschemawidget.cpp \
 	moc_toscripttreemodel.cpp \
 	moc_toworkingwidget.cpp \
+	shortcuteditor/moc_shortcuteditordialog.cpp \
+	shortcuteditor/moc_shortcutmodel.cpp \
+	moc_todocklet.cpp \
+	moc_todockbar.cpp \
+	moc_topushbutton.cpp \
+    moc_tobrowserbasewidget.cpp \
+    moc_tobrowseraccesswidget.cpp \
+    moc_tobrowsertablewidget.cpp \
+    moc_tobrowserviewwidget.cpp \
+    moc_tobrowserindexwidget.cpp \
+    moc_tobrowserschemawidget.cpp \
+    moc_tobrowsersequencewidget.cpp \
+    moc_tobrowsersynonymwidget.cpp \
+    moc_tobrowsercodewidget.cpp \
+    moc_tobrowsertriggerwidget.cpp \
+    moc_tobrowserdblinkswidget.cpp \
+    moc_toresultgrants.cpp \
+	docklets/moc_toviewdirectory.cpp \
+	docklets/moc_toviewconnections.cpp \
 	ui_toaboutui.h \
 	ui_todroptablespaceui.h \
 	ui_tobrowserconstraintui.h \
 	ui_tobrowserfilterui.h \
 	ui_tobrowserindexui.h \
+	ui_todescribeui.h \
 	ui_tobrowsertableui.h \
 	ui_toconnectionimportui.h \
 	ui_tochartalarmui.h \
@@ -422,6 +465,7 @@ BUILT_SOURCES = \
 	ui_toworksheetsetupui.h \
 	ui_tohelpui.h \
 	ui_toscriptschemawidgetui.h \
+	shortcuteditor/ui_shortcuteditordialog.h \
 	$(EXTRA_ORACLE_MONO_SOURCE_MOC) \
 	$(filter %.qm,$(TRANSLATIONS:%.ts=%.qm)) \
 	tora_toad.h \

@@ -52,47 +52,40 @@
 #include "toresultlistformat.h"
 #include "tolistviewformatter.h"
 #include "tolistviewformatterfactory.h"
-#include "tolistviewformatteridentifier.h"
+//#include "tolistviewformatteridentifier.h"
 #include "toworkingwidget.h"
+#include "tosearchreplace.h"
 
 #include <QClipboard>
-#include <QScrollBar>
-#include <QItemDelegate>
-#include <QSize>
 #include <QFont>
 #include <QFontMetrics>
-#include <QMessageBox>
-#include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QMessageBox>
+#include <QScrollBar>
+#include <QSize>
+#include <QVBoxLayout>
+#include <QProgressDialog>
 
 
-/**
- * This is a simple class for providing sensible size hints to the
- * view.
- *
- */
-class toResultTableViewDelegate : public QItemDelegate
+toResultTableView::toResultTableView(QWidget * parent)
+    : QTableView(parent),
+      toResult(),
+    toEditWidget(false,       // open
+              true,        // save
+              true,        // print
+              false,       // undo
+              false,       // redo
+              false,       // cut
+              true,        // copy
+              false,       // past
+              true,        // search
+              true,        // selectall
+              false),      // readall
+    Model(NULL)
 {
-    static const int maxWidth = 200; // the maximum size to grow a column
-
-public:
-    toResultTableViewDelegate(QObject *parent = 0)
-            : QItemDelegate(parent)
-    {
-    }
-
-
-    virtual QSize sizeHint(const QStyleOptionViewItem &option,
-                           const QModelIndex &index) const
-    {
-        QSize size = QItemDelegate::sizeHint(option, index);
-        if (size.width() > maxWidth)
-            size.setWidth(maxWidth);
-
-        return size;
-    }
-};
-
+    setObjectName("toResultTableView");
+    setup(true, false, false);
+}
 
 toResultTableView::toResultTableView(bool readable,
                                      bool numberColumn,
@@ -114,26 +107,32 @@ toResultTableView::toResultTableView(bool readable,
                      false),      // readall
         Model(NULL)
 {
-
     if (name)
         setObjectName(name);
+    setup(readable, numberColumn, editable);
+}
 
+void toResultTableView::setup(bool readable, bool numberColumn, bool editable)
+{
     Statistics      = NULL;
     Menu            = NULL;
     Editable        = editable;
     ReadAll         = false;
-    Filter          = false;
+    Filter          = 0;
     ReadableColumns = readable;
     NumberColumn    = numberColumn;
     ColumnsResized  = false;
     Ready           = false;
+    VisibleColumns  = 0;
 
     Working = new toWorkingWidget(this);
     connect(Working, SIGNAL(stop()), this, SLOT(stop()));
     Working->hide(); // hide by default
 
-    toResultTableViewDelegate *del = new toResultTableViewDelegate(this);
-    setItemDelegate(del);
+    // set item delegate if default. Don't replace custom set delegate
+    QAbstractItemDelegate *del = itemDelegate();
+    if(dynamic_cast<toResultTableViewDelegate *>(del) == 0)
+        setItemDelegate(new toResultTableViewDelegate(this));
 
     createActions();
 
@@ -178,9 +177,13 @@ toResultTableView::toResultTableView(bool readable,
 
 toResultTableView::~toResultTableView()
 {
-    if (Model)
+    if(Model)
         delete Model;
     Model = NULL;
+
+    if(Filter)
+        delete Filter;
+    Filter = 0;
 }
 
 
@@ -259,9 +262,8 @@ void toResultTableView::createActions()
     leftAct      = new QAction(tr("&Left"), this);
     centerAct    = new QAction(tr("&Center"), this);
     rightAct     = new QAction(tr("&Right"), this);
-    copyAct      = new QAction(tr("&Copy field"), this);
-    copySelAct   = new QAction(tr("Copy &selection"), this);
-    copyHeadAct  = new QAction(tr("Copy selection with &header"), this);
+    copyAct      = new QAction(tr("&Copy"), this);
+    copyFormatAct = new QAction(tr("Copy in &format..."), this);
     copyTransAct = new QAction(tr("Copy &transposed"), this);
     selectAllAct = new QAction(tr("Select &all"), this);
     exportAct    = new QAction(tr("E&xport to file..."), this);
@@ -278,11 +280,15 @@ void toResultTableView::applyFilter()
 
     Filter->startingQuery();
 
+    setUpdatesEnabled(false);
     for (int row = 0; row < Model->rowCount(); row++)
     {
         if (!Filter->check(Model, row))
             hideRow(row);
+        else
+            showRow(row);
     }
+    setUpdatesEnabled(true);
 }
 
 
@@ -306,12 +312,30 @@ void toResultTableView::paintEvent(QPaintEvent *event)
 }
 
 
-void toResultTableView::applyColumnRules(void)
+void toResultTableView::resizeEvent(QResizeEvent *event)
+{
+	if(VisibleColumns == 1 && ReadableColumns)
+		setColumnWidth(1, viewport()->width());
+	QTableView::resizeEvent(event);
+}
+
+
+void toResultTableView::keyPressEvent(QKeyEvent * event)
+{
+	if (event->matches(QKeySequence::Copy))
+	{
+		editCopy();
+		return;
+	}
+	QTableView::keyPressEvent(event);
+}
+
+
+void toResultTableView::applyColumnRules()
 {
     if (!NumberColumn)
         hideColumn(0);
 
-    int visible = 0;
     if (ReadableColumns)
     {
         // loop through columns and hide anything starting with a ' '
@@ -325,14 +349,17 @@ void toResultTableView::applyColumnRules(void)
                 hideColumn(col);
             }
             else
-                visible++;
+                VisibleColumns++;
         }
     }
 
+    // hiding columns sends signal sectionResized
+    ColumnsResized = false;
+
     resizeColumnsToContents();
 
-    if (visible == 1 && ReadableColumns)
-        setColumnWidth(1, viewport()->width());
+	if (VisibleColumns == 1 && ReadableColumns)
+		setColumnWidth(1, viewport()->width());
 }
 
 
@@ -357,8 +384,7 @@ void toResultTableView::displayMenu(const QPoint &pos)
         Menu->addSeparator();
 
         Menu->addAction(copyAct);
-        Menu->addAction(copySelAct);
-        Menu->addAction(copyHeadAct);
+        Menu->addAction(copyFormatAct);
         // not implemented
         // Menu->addAction(copyTransAct);
 
@@ -432,21 +458,14 @@ void toResultTableView::menuCallback(QAction *action)
         refresh();
     else if (action == exportAct)
         editSave(false);
-    else if (action == copySelAct || action == copyHeadAct)
+    else if (action == copyFormatAct)
     {
-        QString sep, del;
-        int type = exportType(sep, del);
-
-        if(type > -1)
-        {
-            QString t = exportAsText(action == copyHeadAct,
-                                     true,
-                                     type,         // as text
-                                     sep,
-                                     del);
-            QClipboard *clip = qApp->clipboard();
-            clip->setText(t);
-        }
+        toResultListFormat exp(this, toResultListFormat::TypeCopy);
+        if (!exp.exec())
+            return;
+        QString t = exportAsText(exp.exportSettings());
+        QClipboard *clip = qApp->clipboard();
+        clip->setText(t);
     }
 }
 
@@ -506,6 +525,101 @@ bool toResultTableView::running(void)
     return Model->canFetchMore(index);
 }
 
+bool toResultTableView::searchNext(const QString & text)
+{
+    QModelIndex index = currentIndex();
+    int row = currentIndex().row();
+    int col = currentIndex().column() + 1;
+
+    bool cs = toMainWidget()->searchDialog()->caseSensitive();
+    bool ww = toMainWidget()->searchDialog()->wholeWords();
+    bool rx = toMainWidget()->searchDialog()->searchMode() == Search::SearchRegexp;
+
+    QString currentText;
+    QString realSearch(text);
+
+    if (!cs)
+        realSearch = realSearch.toUpper();
+
+    bool stop = false;
+    while (row < Model->rowCount())
+    {
+        while (col < Model->columnCount())
+        {
+            currentText = Model->data(Model->index(row, col)).toString().trimmed();
+            if (!cs)
+                currentText = currentText.toUpper();
+
+            if (rx && currentText.contains(QRegExp(text)))
+                stop  = true;
+            else if ((ww && currentText == realSearch) || (!ww && currentText.contains(realSearch)))
+                stop = true;
+
+            if (stop)
+            {
+                setCurrentIndex(Model->index(row, col));
+                return true;
+            }
+            ++col;
+        }
+        ++row;
+        col = 0;
+    }
+
+    return false;
+}
+
+bool toResultTableView::searchPrevious(const QString & text)
+{
+    QModelIndex index = currentIndex();
+    int row = currentIndex().row();
+    int col = currentIndex().column() - 1;
+
+    bool cs = toMainWidget()->searchDialog()->caseSensitive();
+    bool ww = toMainWidget()->searchDialog()->wholeWords();
+    bool rx = toMainWidget()->searchDialog()->searchMode() == Search::SearchRegexp;
+
+    QString currentText;
+    QString realSearch(text);
+
+    if (!cs)
+        realSearch = realSearch.toUpper();
+
+    bool stop = false;
+    while (row >= 0)
+    {
+        while (col >= 0)
+        {
+            currentText = Model->data(Model->index(row, col)).toString().trimmed();
+            if (!cs)
+                currentText = currentText.toUpper();
+
+            if (rx && currentText.contains(QRegExp(text)))
+                stop  = true;
+            else if ((ww && currentText == realSearch) || (!ww && currentText.contains(realSearch)))
+                stop = true;
+
+            if (stop)
+            {
+                setCurrentIndex(Model->index(row, col));
+                return true;
+            }
+            --col;
+        }
+        --row;
+        col = Model->columnCount();
+    }
+
+    return false;
+}
+
+void toResultTableView::setFilter(toViewFilter *filter)
+{
+    if(Filter)
+        delete Filter;
+    Filter = filter;
+}
+
 
 void toResultTableView::setModel(toResultModel *model)
 {
@@ -539,47 +653,28 @@ QModelIndex toResultTableView::selectedIndex(int col)
 }
 
 
-int toResultTableView::exportType(QString &separator, QString &delimiter)
+QString toResultTableView::exportAsText(toExportSettings settings)
 {
-    toResultListFormat format(this, NULL);
-    if (!format.exec())
-        return -1;
-
-    format.saveDefault();
-
-    separator = format.Separator->text();
-    delimiter = format.Delimiter->text();
-
-    return format.Format->currentIndex();
-}
-
-
-QString toResultTableView::exportAsText(bool includeHeader,
-                                        bool onlySelection,
-                                        int type,
-                                        QString &separator,
-                                        QString &delimiter)
-{
-    QString result;
-
-    if (type < 0)
-        type = exportType(separator, delimiter);
-    if (type < 0)
-        return QString::null;
-
-    toExportSettings settings(includeHeader,
-                              onlySelection,
-                              type,
-                              separator,
-                              delimiter);
-    if(onlySelection)
+    if (settings.requireSelection())
         settings.selected = selectedIndexes();
 
-    std::auto_ptr<toListViewFormatter> pFormatter(
-        toListViewFormatterFactory::Instance().CreateObject(type));
-    result = pFormatter->getFormattedString(settings, model());
+    if (settings.rowsExport == toExportSettings::RowsAll)
+    {
+        QProgressDialog progress("Fetching All Data...", "Abort", 0, 2, this);
+        progress.setWindowModality(Qt::WindowModal);
+        while (Model->canFetchMore(currentIndex()))
+        {
+            if (progress.wasCanceled())
+                break;
+            Model->fetchMore(currentIndex());
+            progress.setValue(progress.value() == 0 ? 1 : 0);
+        }
+        progress.setValue(2);
+    }
 
-    return result;
+    std::auto_ptr<toListViewFormatter> pFormatter(
+        toListViewFormatterFactory::Instance().CreateObject(settings.type));
+    return pFormatter->getFormattedString(settings, model());
 }
 
 
@@ -589,38 +684,17 @@ bool toResultTableView::editSave(bool askfile)
 {
     try
     {
-        QString delimiter;
-        QString separator;
-        int type = exportType(separator, delimiter);
-
-        QString nam;
-        switch (type)
-        {
-        case - 1:
+        toResultListFormat exp(this, toResultListFormat::TypeExport);
+        if (!exp.exec())
             return false;
-        default:
-            nam = "*.txt";
-            break;
-        case 2:
-            nam = "*.csv";
-            break;
-        case 3:
-            nam = "*.html";
-            break;
-        case 4:
-            nam = "*.sql";
-            break;
-        }
 
-        QString filename = toSaveFilename(QString::null, nam, this);
+        toExportSettings settings = exp.exportSettings();
+
+        QString filename = toSaveFilename(QString::null, settings.extension, this);
         if (filename.isEmpty())
             return false;
 
-        return toWriteFile(filename, exportAsText(true,
-                           false,
-                           type,
-                           separator,
-                           delimiter));
+        return toWriteFile(filename, exportAsText(settings));
     }
     TOCATCH;
 
@@ -639,15 +713,11 @@ void toResultTableView::editCopy()
 
     // if there's a selection, then export as text to clipboard
     QModelIndexList sel = selectedIndexes();
-    if(sel.size() > 1)
+    if (sel.size() > 1)
     {
-        QString sep, del;
-        QString t = exportAsText(true,
-                                 true,
-                                 0,         // as text
-                                 sep,
-                                 del);
-        clip->setText(t);
+        toExportSettings settings = toResultListFormat::plaintextCopySettings();
+        settings.selected = sel;
+        clip->setText(exportAsText(settings));
     }
     else
     {
