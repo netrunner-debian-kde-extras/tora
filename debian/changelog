@@ -5,8 +5,9 @@ tora (2.1.0-1) unstable; urgency=low
   * New project homepage.
   * Removed no longer needed 01_missing_includes.dpatch.
   * Removed no longer used dh_desktop call.
+  * Added README.source file.
 
- -- Michael Meskes <meskes@debian.org>  Thu, 10 Sep 2009 18:24:33 +0200
+ -- Michael Meskes <meskes@debian.org>  Fri, 11 Sep 2009 12:37:52 +0200
 
 tora (2.0.0-4) unstable; urgency=low
 
