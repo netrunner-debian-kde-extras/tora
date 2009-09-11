@@ -1,6 +1,6 @@
 tora (2.1.0-1) unstable; urgency=low
 
-  * New upstream version.
+  * New upstream version, the rebuild closes: #540046.
   * Bumped Standards-Version to 3.8.3, no changes needed.
   * New project homepage.
   * Removed no longer needed 01_missing_includes.dpatch.
