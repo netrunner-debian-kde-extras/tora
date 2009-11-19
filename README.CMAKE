@@ -45,6 +45,9 @@ You have to specify -DORACLE_OCI_VERSION for one of values:
 [8, 8I, 9I, 10G, 10G_R2]. Example:
 -DORACLE_OCI_VERSION=10G_R2
 
+You can switch off Oracle support with:
+-DENABLE_ORACLE=0
+
 
 TOra requires PostgreSQL development environment to enable
 full PgSQL support (native cancel etc.).
@@ -56,11 +59,17 @@ specify path for alternative location and/or for Windows too.
 Windows note: Sometimes (dunno why) it doesn't find pgsql libs.
               You can use "set LIB=%LIB%;pathtopgsqllibs" then.
 etc.
+Native PostgreSQL support can be disabled with:
+-DENABLE_PGSQL=0
 
 
 TOra allows to be built as "bundle" application on Mac OS X.
 -DWANT_BUNDLE=1
-The bundle will be created in the CMAKE_INSTALL_PREFIX.
+The bundle will be created in the CMAKE_INSTALL_PREFIX. The bundle
+will contain all dependencies (Qt libs, DB clients libs etc.).
+If there is WANT_BUNDLE specified, it can be set not to pack
+all required libraries into the bundle location with:
+-DWANT_BUNDLE_STANDALONE=1
 
 
 Search following for more info:

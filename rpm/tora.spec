@@ -7,7 +7,7 @@
 
 %define _name           tora
 
-%define _version        2.1.0
+%define _version        2.1.1
 %define _release        1
 
 # filter out oracle libraries because oracle-instantclient rpm doesn't provide them
@@ -27,13 +27,15 @@ Group:                  Development/Databases
 License:                GPL
 BuildRoot:              %{_tmppath}/tora-root
 BuildRequires: postgresql-devel
-BuildRequires: oracle-instantclient-devel
+BuildRequires: oracle-instantclient11.1-devel
 BuildRequires: qt4-devel >= 4.3.0
 BuildRequires: openssl-devel
+BuildRequires: qscintilla-devel >= 2.0.0
 BuildRequires: perl
 BuildRequires: cmake >= 2.4.0
 Requires:      qt4 >= 4.3.0
-Requires:      oracle-instantclient-basic
+Requires:      oracle-instantclient11.1-basic
+Requires:      qscintilla >= 2.0.0
 
 
 #
@@ -77,7 +79,6 @@ unset ORACLE_HOME
 
 %{__cmake} \
         -DCMAKE_INSTALL_PREFIX:PATH=%{_prefix} \
-        -DWANT_INTERNAL_QSCINTILLA=1 \
         -DORACLE_PATH_INCLUDES=$(ls -d -1 %{oraincdir}/*/%{oraclientdir} | tail -n 1) \
         -DORACLE_PATH_LIB=$(ls -d -1 %{oralibdir}/*/%{oraclientdir}/lib | tail -n 1) \
         -DPOSTGRESQL_PATH_INCLUDES=%{_includedir} \
@@ -126,6 +127,10 @@ perl -pi -e 's/(libclntsh.so)(\.\d+\.\d+)/sprintf("%s%s",$1,"\0" x length($2))/g
 %{__rm} -rf "${RPM_BUILD_ROOT}"
 
 %changelog
+* Tue Nov 18 2008 Michael Mraka <michael.mraka@redhat.com> 2.1.0-1
+- bumped to latest version
+- uses oracle-instantclient11.1
+
 * Tue Nov 18 2008 Michael Mraka <michael.mraka@redhat.com> 2.0.0-0.3100svn
 - added cmake 2.4 patch
 

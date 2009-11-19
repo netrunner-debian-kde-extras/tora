@@ -259,6 +259,7 @@ UI_FILES = toaboutui.ui \
 EXTRA_DIST = icons \
 	templates \
 	windows \
+	qscintilla2 \
 	COPYRIGHT.h \
 	help \
 	$(LOKIDIR_INC) \
@@ -275,7 +276,8 @@ EXTRA_DIST = icons \
 	toresultresources.h \
 	$(TRANSLATIONS) \
 	LICENSE.h \
-	tora.qrc
+	tora.qrc \
+	tora.rc
 
 # this is a hack (but it *is* mentioned in the automake manual, of all
 # places). EXTRA_DIST includes all files, even things like CVS

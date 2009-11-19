@@ -319,7 +319,8 @@ EXTRA_DIST = debian \
 	utils/chex/CMakeLists.txt \
 	cmake_uninstall.cmake.in \
 	config.h.cmake \
-	cmake
+	cmake \
+	osx_tools
 
 SUBDIRS = utils src test doc
 all: config.h

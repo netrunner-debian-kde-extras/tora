@@ -458,10 +458,13 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_BINARY_DIR}
   ${QT_INCLUDES}
-  ${ORACLE_INCLUDES}
   ${CMAKE_CURRENT_SOURCE_DIR}/loki/include
   ${CMAKE_CURRENT_SOURCE_DIR}/otl
 )
+
+IF (ORACLE_INCLUDES)
+        INCLUDE_DIRECTORIES( ${ORACLE_INCLUDES} )
+ENDIF (ORACLE_INCLUDES)
 
 IF (POSTGRESQL_INCLUDE_DIR)
   INCLUDE_DIRECTORIES( ${POSTGRESQL_INCLUDE_DIR} )
@@ -479,6 +482,11 @@ ENDIF (WANT_INTERNAL_QSCINTILLA)
 
 # Handle win/mac special stuff - it's left empty for linux/unix
 SET (GUI_TYPE)
+IF (APPLE AND WANT_BUNDLE)
+    SET(GUI_TYPE MACOSX_BUNDLE)
+    SET(APPLE_BUNDLE_SOURCES icons/tora.icns)
+ENDIF (APPLE AND WANT_BUNDLE)
+
 
 IF(WIN32)
     IF (MSVC)
@@ -486,20 +494,13 @@ IF(WIN32)
         # WinMain wrapper from QT_QTMAIN_LIBRARY is used and liner must be modified
         LINK_LIBRARIES(${QT_QTMAIN_LIBRARY})
         SET (GUI_TYPE WIN32)
-	IF (WANT_DEBUG)
-	        SET (CMAKE_EXE_LINKER_FLAGS "/NODEFAULTLIB:msvcrtd.lib ${CMAKE_EXE_LINKER_FLAGS}")
-	ELSE (WANT_DEBUG)
+        IF (WANT_DEBUG)
+                SET (CMAKE_EXE_LINKER_FLAGS "/NODEFAULTLIB:msvcrtd.lib ${CMAKE_EXE_LINKER_FLAGS}")
+        ELSE (WANT_DEBUG)
             SET (CMAKE_EXE_LINKER_FLAGS "/NODEFAULTLIB:msvcrt.lib ${CMAKE_EXE_LINKER_FLAGS}")
-	ENDIF (WANT_DEBUG)
+        ENDIF (WANT_DEBUG)
     ENDIF (MSVC)
 ENDIF(WIN32)
-
-IF (APPLE AND WANT_BUNDLE)
-    SET(GUI_TYPE MACOSX_BUNDLE)
-    SET(MACOSX_BUNDLE_ICON_FILE tora.icns)
-    SET(APPLE_BUNDLE_SOURCES icons/tora.icns)
-    SET_SOURCE_FILES_PROPERTIES(${CMAKE_SOURCE_DIR}/src/icons/tora.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-ENDIF (APPLE AND WANT_BUNDLE)
 
 
 ADD_EXECUTABLE(${EXE_NAME} ${GUI_TYPE}
@@ -515,10 +516,13 @@ ADD_EXECUTABLE(${EXE_NAME} ${GUI_TYPE}
 # dynamic
 TARGET_LINK_LIBRARIES(${EXE_NAME}
   ${QT_LIBRARIES}
-  ${ORACLE_LIBRARIES}
   ${LIBXML2_LIBRARIES}
   ${QSCINTILLA_LIBRARIES}
 )
+
+IF (ORACLE_LIBRARIES)
+        TARGET_LINK_LIBRARIES (${EXE_NAME} ${ORACLE_LIBRARIES} )
+ENDIF (ORACLE_LIBRARIES)
 
 IF (POSTGRESQL_LIBRARIES)
   TARGET_LINK_LIBRARIES (${EXE_NAME} ${POSTGRESQL_LIBRARIES})
@@ -532,6 +536,10 @@ ENDIF (WANT_INTERNAL_QSCINTILLA)
 # prevent opening the cmd.exe window
 IF (WIN32)
     TARGET_LINK_LIBRARIES(${EXE_NAME} ${WINDOWS_LIB})
+    # don't use console subsystem
+    IF (MINGW)
+        TARGET_LINK_LIBRARIES(${EXE_NAME} "-mwindows")
+    ENDIF (MINGW)
 ENDIF (WIN32)
 
 
@@ -541,7 +549,97 @@ ELSE (WIN32)
     IF (NOT WANT_BUNDLE)
         INSTALL(TARGETS ${EXE_NAME} RUNTIME DESTINATION bin LIBRARY DESTINATION lib)
     ELSE (NOT WANT_BUNDLE)
+
+      SET_TARGET_PROPERTIES(${EXE_NAME} PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/osx_tools/Info.plist.in")
+      SET(MACOSX_BUNDLE_ICON_FILE tora.icns)
+      SET(MACOSX_BUNDLE_INFO_STRING "${EXE_NAME} ${VERSION}")
+      SET(MACOSX_BUNDLE_GUI_IDENTIFIER "com.torasql")
+      SET(MACOSX_BUNDLE_LONG_VERSION_STRING "${VERSION}")
+      SET(MACOSX_BUNDLE_BUNDLE_NAME "${EXE_NAME}")
+      SET(MACOSX_BUNDLE_SHORT_VERSION_STRING "${VERSION}")
+      SET(MACOSX_BUNDLE_BUNDLE_VERSION "${VERSION}")
+      SET(MACOSX_BUNDLE_COPYRIGHT "(c) TOra developers")
+      SET_SOURCE_FILES_PROPERTIES(${CMAKE_SOURCE_DIR}/src/icons/tora.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+
+        # Warning: This is dangerous to touch. Except you know what are you doing.
+        #          I ususaly don't know anything about it. But it's working ;)
+ 
         INSTALL(TARGETS ${EXE_NAME} BUNDLE DESTINATION ${CMAKE_INSTALL_PREFIX})
+
+      IF (WANT_BUNDLE_STANDALONE)
+        # --- If we are on OS X copy all the embedded libraries to the app bundle
+        # -------- Function to build OS X Stand Alone Bundles -----------------
+        function(MakeOSXBundleApp target binary_dir)
+            #-- Set some useful variables
+            SET (OSX_MAKE_STANDALONE_BUNDLE_CMAKE_SCRIPT "${binary_dir}/${target}_OSX_MakeStandAloneBundle.cmake")
+            SET (OSX_MAKE_STANDALONE_BUNDLE_BASH_SCRIPT "${binary_dir}/${target}_OSX_MakeStandAloneBundle.sh")
+            #-- Configure the cmake file and the shell script
+            CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/osx_tools/CompleteBundle.cmake.in"
+                           "${OSX_MAKE_STANDALONE_BUNDLE_CMAKE_SCRIPT}" @ONLY IMMEDIATE)
+            CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/osx_tools/CreateBundle.sh.in"
+                           "${OSX_MAKE_STANDALONE_BUNDLE_BASH_SCRIPT}" @ONLY IMMEDIATE)
+            #-- Create the installation code
+            install(SCRIPT "${OSX_MAKE_STANDALONE_BUNDLE_CMAKE_SCRIPT}")
+        endfunction(MakeOSXBundleApp)
+
+
+        install(DIRECTORY ${QT_PLUGINS_DIR}/
+                DESTINATION ${PROJECT_BINARY_DIR}/Contents/Plugins/
+                REGEX "(designer|script|phonon_backend|debug|sqlite|ico)" EXCLUDE)
+
+        install(CODE "
+            # glob for previously installed qt plugins to include in fixup_bundle
+            file(GLOB_RECURSE PluginList
+                 ${PROJECT_BINARY_DIR}/Contents/Plugins/*.bundle)
+        ")
+
+        MakeOSXBundleApp(${EXE_NAME} ${PROJECT_BINARY_DIR})
+
+        # TODO/FIXME: this is evil! And it should be done automagically...
+        set(hack_bundle_pth "${CMAKE_INSTALL_PREFIX}/${EXE_NAME}.app/Contents/MacOS")
+        INSTALL(CODE "file(MAKE_DIRECTORY ${hack_bundle_pth}/sqldrivers)")
+        INSTALL(CODE "file(MAKE_DIRECTORY ${hack_bundle_pth}/codecs)")
+        INSTALL(CODE "file(MAKE_DIRECTORY ${hack_bundle_pth}/accessible)")
+        INSTALL(CODE "file(MAKE_DIRECTORY ${hack_bundle_pth}/imageformats)")
+        INSTALL(CODE "file(MAKE_DIRECTORY ${hack_bundle_pth}/graphicssystems)")
+        function(hack_move_plugins filename targetdir)
+            install(CODE "
+                message(STATUS \"file:: ${filename} -> targetdir: ${targetdir} ${hack_bundle_pth}\")
+            ")
+            install(FILES ${hack_bundle_pth}/${filename} DESTINATION ${hack_bundle_pth}/${targetdir})
+            install(CODE "file(REMOVE ${hack_bundle_pth}/${filename})")
+        endfunction(hack_move_plugins)
+        hack_move_plugins("libqcncodecs.bundle" "codecs")
+        hack_move_plugins("libqjpcodecs.bundle" "codecs")
+        hack_move_plugins("libqtwcodecs.bundle" "codecs")
+        hack_move_plugins("libqkrcodecs.bundle" "codecs")
+        hack_move_plugins("libqsqlmysql.bundle" "sqldrivers")
+        hack_move_plugins("libqsqlodbc.bundle" "sqldrivers")
+        hack_move_plugins("libqsqlpsql.bundle" "sqldrivers")
+        hack_move_plugins("libqgif.bundle" "imageformats")
+        hack_move_plugins("libqjpeg.bundle" "imageformats")
+        hack_move_plugins("libqmng.bundle" "imageformats")
+        hack_move_plugins("libqsvg.bundle" "imageformats")
+        hack_move_plugins("libqtiff.bundle" "imageformats")
+        hack_move_plugins("libqtaccessiblewidgets.bundle" "accessible")
+        hack_move_plugins("libqtaccessiblecompatwidgets.bundle" "accessible")
+        hack_move_plugins("libqglgraphicssystem.bundle" "graphicssystems")
+        # end of hack
+
+        #-- Put an empty qt.conf file in the bundle so as to NOT load plugins from the installed Qt.
+        INSTALL(CODE "message(STATUS \"${CMAKE_INSTALL_PREFIX}/${EXE_NAME}.app/Contents/Resources/qt.conf\")")
+        INSTALL(FILES "${CMAKE_SOURCE_DIR}/osx_tools/qt.conf.in"
+                DESTINATION "${CMAKE_INSTALL_PREFIX}/${EXE_NAME}.app/Contents/Resources/"
+                RENAME "qt.conf")
+
+        if ("${QT_MAC_USE_COCOA}" STREQUAL "1")
+            INSTALL(CODE "message(STATUS \"Copying qt_menu.nib into ${CMAKE_INSTALL_PREFIX}/${EXE_NAME}.app/Contents/Resources\")")
+            INSTALL(CODE "file(MAKE_DIRECTORY \"${CMAKE_INSTALL_PREFIX}/${EXE_NAME}.app/Contents/Resources/qt_menu.nib\")")
+            INSTALL(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
+                             \"${QT_LIBRARY_DIR}/QtGui.framework/Resources/qt_menu.nib\"
+                             \"${CMAKE_INSTALL_PREFIX}/${EXE_NAME}.app/Contents/Resources/qt_menu.nib\")")
+        endif()
+      ENDIF (WANT_BUNDLE_STANDALONE)
+
     ENDIF (NOT WANT_BUNDLE)
 ENDIF (WIN32)
-
