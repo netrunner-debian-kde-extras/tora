@@ -5,6 +5,7 @@ include /usr/share/cdbs/1/class/cmake.mk
 include /usr/share/cdbs/1/rules/dpatch.mk
 
 DEB_KDE_ENABLE_FINAL := yes
+DEB_DBG_PACKAGES := tora-dbg
 
 ifeq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
     cdbs_treat_me_gently_arches := arm m68k alpha ppc64 armel armeb
