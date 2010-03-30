@@ -18,13 +18,13 @@ endif
 
 install/tora::
 	# remove some file we don't want to install
-	rm -f $(CURDIR)/debian/tora/usr/share/doc/tora/README.OSX
-	rm -f $(CURDIR)/debian/tora/usr/share/doc/tora/README.LICENSE
-	rm -f $(CURDIR)/debian/tora/usr/share/doc/tora/README.WINDOWS
-	rm -f $(CURDIR)/debian/tora/usr/share/doc/tora/INSTALL
-	rm -f $(CURDIR)/debian/tora/usr/share/doc/tora/COPYING
-	rm -f $(CURDIR)/debian/tora/usr/share/doc/tora/ChangeLog
-	rm -f $(CURDIR)/debian/tora/usr/share/doc/tora/changelog
+	rm -f $(CURDIR)/debian/tmp/usr/share/doc/tora/README.OSX
+	rm -f $(CURDIR)/debian/tmp/usr/share/doc/tora/README.LICENSE
+	rm -f $(CURDIR)/debian/tmp/usr/share/doc/tora/README.WINDOWS
+	rm -f $(CURDIR)/debian/tmp/usr/share/doc/tora/INSTALL
+	rm -f $(CURDIR)/debian/tmp/usr/share/doc/tora/COPYING
+	rm -f $(CURDIR)/debian/tmp/usr/share/doc/tora/ChangeLog
+	rm -f $(CURDIR)/debian/tmp/usr/share/doc/tora/changelog
 	# this file cannot be installed by dh_install because it has to be renamed
 	-install --owner root --group root --mode=644 $(CURDIR)/src/icons/toramini.xpm $(CURDIR)/debian/tora/usr/share/icons/hicolor/16x16/apps/tora.xpm
 	# we have a desktop file
