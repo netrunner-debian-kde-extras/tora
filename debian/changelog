@@ -2,6 +2,7 @@ tora (2.1.2-1) unstable; urgency=low
 
   * Added debug package. (Closes: #560064)
   * New Upstream version 2.1.2
+  * Bumped Standards-Version to 3.8.4, no changes needed.
 
  -- Michael Meskes <meskes@debian.org>  Tue, 30 Mar 2010 13:14:16 +0200
 
