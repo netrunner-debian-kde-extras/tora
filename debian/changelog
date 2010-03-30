@@ -13,6 +13,7 @@ tora (2.1.2-1) unstable; urgency=low
     * New: Initial support for creating/modifying tables
     * Bugfixes
   * Bumped Standards-Version to 3.8.4, no changes needed.
+  * No patches needed anymore, removed patch system.
 
  -- Michael Meskes <meskes@debian.org>  Tue, 30 Mar 2010 13:14:16 +0200
 
