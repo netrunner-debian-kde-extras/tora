@@ -84,7 +84,8 @@ public:
         DefaultBg = 5,
         ErrorBg = 6,
         DebugBg = 7,
-        CurrentLineMarker = 8
+        CurrentLineMarker = 8,
+        StaticBg = 9
     };
 private:
     /** Indicate if colors are updated, can't do this in constructor since QApplication
@@ -95,12 +96,6 @@ private:
      */
     QMap<infoType,QColor> Colors;
 
-    /** marker per linea contenente errori
-      */
-//     int errorMarker;
-    /** marker per linea corrente
-      */
-//     int debugMarker;
     /** Keeps track of possible hits found so far.
      */
     struct posibleHit
@@ -173,7 +168,7 @@ public:
      */
     QColor getColor(infoType typ);
 
-    /** Check if a word is reserved.
+    /** Check if a word is reserved. (Used in toSQLParse)
      * @param word Word to check.
      * @return True if word is reserved.
      */
@@ -247,8 +242,6 @@ protected:
     int m_errorHandle;
     //! \brief A handler for code error - margin
     int m_errorMarginHandle;
-    //! \brief A handler for current line highlighting - line highlighted
-    int m_currentLineHandle;
     //! \brief A handler for current line highlighting - margin
     int m_currentLineMarginHandle;
     //! \brief A handler for bookrmarks - line highlighted
@@ -257,6 +250,10 @@ protected:
     int m_bookmarkMarginHandle;
     //! \brief Bookrmarks handler list used for navigation (next/prev)
     QList<int> m_bookmarks;
+    //! \brief A handler for static check observations - line highlighted
+    int m_staticHandle;
+    //! \brief A handler for static check observations - margin
+    int m_staticMarginHandle;
 
     toComplPopup* popup;
 
@@ -319,7 +316,7 @@ public:
         return line;
     }
 
-    /** Set current line. Will be indicated with a different background.
+    /** Set current debug line. Will be indicated with a different background. Used from debug tool.
      * @param current Current line.
      */
     void setCurrent(int current);
@@ -332,7 +329,7 @@ public:
      * @param errors A map of linenumbers to errorstrings. These will be displayed in the
      *               statusbar if the cursor is placed on the line.
      */
-    void setErrors(const QMap<int, QString> &errors);
+    void setErrors(const QMap<int, QString> &errors, bool errorsGiven = true);
 
     /**
      * DEPRECATED: should use setLexer() instead!!!

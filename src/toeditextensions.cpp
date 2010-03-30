@@ -91,6 +91,11 @@ QAction * BookmarkSwitchAct = NULL;
 QAction * BookmarkPrevAct = NULL;
 QAction * BookmarkNextAct = NULL;
 
+QMenu * EolMenu = NULL;
+QAction * EolUnixAct = NULL;
+QAction * EolMacAct = NULL;
+QAction * EolWindowsAct = NULL;
+
 QAction *Indent       = NULL;
 QAction *Deindent     = NULL;
 QAction *Quote        = NULL;
@@ -150,6 +155,7 @@ void toEditExtensions::editEnabled(bool enable)
     IndentMenu->setEnabled(enable);
     CaseMenu->setEnabled(enable);
     BookmarkMenu->setEnabled(enable);
+    EolMenu->setEnabled(enable);
 
     Indent->setEnabled(enable);
     Deindent->setEnabled(enable);
@@ -179,6 +185,26 @@ void toEditExtensions::bookmarkNext()
     toHighlightedText * t = qobject_cast<toHighlightedText*>(Current);
     if (t)
         t->gotoNextBookmark();
+}
+
+void toEditExtensions::convertEol()
+{
+    QAction * snd = reinterpret_cast<QAction*>(sender());
+    toHighlightedText * t = qobject_cast<toHighlightedText*>(Current);
+    if (!t)
+        return;
+    QsciScintilla::EolMode em;
+    if (snd == EolUnixAct)
+        em = QsciScintilla::EolUnix;
+    else if (snd == EolMacAct)
+        em = QsciScintilla::EolMac;
+    else if (snd == EolWindowsAct)
+        em = QsciScintilla::EolWindows;
+    else
+        assert(0);
+
+    t->convertEols(em);
+    t->setEolMode(em);
 }
 
 void toEditExtensions::gotoLine()
@@ -722,6 +748,12 @@ public:
                                                     &EditExtensions,
                                                     SLOT(bookmarkNext()));
         BookmarkNextAct->setShortcut(Qt::ALT + Qt::Key_PageDown);
+
+        // EOL menu
+        EolMenu = edit->addMenu(qApp->translate("toEditExtensionTool", "Convert End of Lines to"));
+        EolUnixAct = EolMenu->addAction("UNIX", &EditExtensions, SLOT(convertEol()));
+        EolMacAct = EolMenu->addAction("Mac OS X", &EditExtensions, SLOT(convertEol()));
+        EolWindowsAct = EolMenu->addAction("MS Windows", &EditExtensions, SLOT(convertEol()));
 
         // ------------------------------ etc
 

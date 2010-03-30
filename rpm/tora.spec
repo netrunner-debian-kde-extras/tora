@@ -7,7 +7,7 @@
 
 %define _name           tora
 
-%define _version        2.1.1
+%define _version        2.1.2
 %define _release        1
 
 # filter out oracle libraries because oracle-instantclient rpm doesn't provide them
@@ -27,14 +27,15 @@ Group:                  Development/Databases
 License:                GPL
 BuildRoot:              %{_tmppath}/tora-root
 BuildRequires: postgresql-devel
-BuildRequires: oracle-instantclient11.1-devel
+BuildRequires: oracle-instantclient11.2-devel
 BuildRequires: qt4-devel >= 4.3.0
 BuildRequires: openssl-devel
 BuildRequires: qscintilla-devel >= 2.0.0
 BuildRequires: perl
 BuildRequires: cmake >= 2.4.0
+BuildRequires: gcc-c++
 Requires:      qt4 >= 4.3.0
-Requires:      oracle-instantclient11.1-basic
+Requires:      oracle-instantclient11.2-basic
 Requires:      qscintilla >= 2.0.0
 
 

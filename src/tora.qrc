@@ -1,12 +1,12 @@
 <RCC>
     <qresource prefix="/" >
-        <file>help/Explain-plan.html</file>
-        <file>help/Getting-bind-parameters.html</file>
+        <file>help/explainplan.html</file>
+        <file>help/gettingbindparameters.html</file>
         <file>help/Index_002dlist.html</file>
-        <file>help/Memo-editor.html</file>
-        <file>help/Object-description.html</file>
-        <file>help/SGA-Statement.html</file>
-        <file>help/What-privileges-do-you-need-to-run-TOra.html</file>
+        <file>help/memoeditor.html</file>
+        <file>help/objectdescription.html</file>
+        <file>help/sgastatement.html</file>
+        <file>help/whatprivileges.html</file>
         <file>help/additionalhelp.html</file>
         <file>help/alert.html</file>
         <file>help/analyze.html</file>
@@ -20,7 +20,7 @@
         <file>help/editors.html</file>
         <file>help/extendingtora.html</file>
         <file>help/externalapi.html</file>
-        <file>help/fonts.html</file>
+        <file>help/editor.html</file>
         <file>help/globalsettings.html</file>
         <file>help/help.html</file>
         <file>help/history.html</file>
@@ -41,7 +41,8 @@
         <file>help/images/difference.png</file>
         <file>help/images/editmenu.png</file>
         <file>help/images/filemenu.png</file>
-        <file>help/images/fonts.png</file>
+        <file>help/images/editor.png</file>
+        <file>help/images/editor_syntax.png</file>
         <file>help/images/getparam.png</file>
         <file>help/images/help.png</file>
         <file>help/images/helpmenu.png</file>
@@ -49,6 +50,7 @@
         <file>help/images/largelogo.png</file>
         <file>help/images/lists.png</file>
         <file>help/images/memo.png</file>
+        <file>help/images/mysql.png</file>
         <file>help/images/newconnection.png</file>
         <file>help/images/oracle.png</file>
         <file>help/images/output.png</file>
@@ -121,6 +123,7 @@
         <file>icons/backgroundlabel.gif</file>
         <file>icons/breakpoint.xpm</file>
         <file>icons/canceledit.xpm</file>
+        <file>icons/checkcode.xpm</file>
         <file>icons/changeconnect.xpm</file>
         <file>icons/changewatch.xpm</file>
         <file>icons/chart.xpm</file>

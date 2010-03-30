@@ -2,39 +2,39 @@
 /* BEGIN_COMMON_COPYRIGHT_HEADER
  *
  * TOra - An Oracle Toolkit for DBA's and developers
- * 
+ *
  * Shared/mixed copyright is held throughout files in this product
- * 
+ *
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
  * Portions Copyright (C) 2004-2008 Numerous Other Contributors
- * 
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation;  only version 2 of
  * the License is valid for this program.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
- * 
+ *
  *      As a special exception, you have permission to link this program
  *      with the Oracle Client libraries and distribute executables, as long
  *      as you follow the requirements of the GNU GPL in regard to all of the
  *      software in the executable aside from Oracle client libraries.
- * 
+ *
  *      Specifically you are not permitted to link this program with the
  *      Qt/UNIX, Qt/Windows or Qt Non Commercial products of TrollTech.
  *      And you are not permitted to distribute binaries compiled against
- *      these libraries. 
- * 
+ *      these libraries.
+ *
  *      You may link this product with any GPL'd Qt library.
- * 
+ *
  * All trademarks belong to their respective owners.
  *
  * END_COMMON_COPYRIGHT_HEADER */
@@ -329,6 +329,25 @@ public:
      */
     void execute(const QString &sql, const std::list<toQValue> &params);
 
+    /** Execute an SQL statement with no parameters using this query.
+     * @param sql SQL to run.
+     */
+    void execute(const toSQL &sql);
+
+    /** Execute an SQL statement using this query with String as parameter
+     * @param sql SQL to run.
+     * @param param Parameter to pass to query
+     */
+    void execute(const toSQL &sql, const QString &param);
+
+    /** Execute an SQL statement using this query with 3 Strings as parameters
+     * @param sql SQL to run.
+     * @param param1 1st parameter
+     * @param param2 2nd parameter
+     * @param param3 3rd parameter
+     */
+    void execute(const toSQL &sql, const QString &param1, const QString &param2, const QString &param3);
+
     /** Connection object of this object.
      */
     toConnection &connection(void)
@@ -410,6 +429,15 @@ public:
     static std::list<toQValue> readQuery(toConnection &conn,
                                          const QString &sql,
                                          std::list<toQValue> &params);
+
+    /** Execute a query using this oracle session and return all values.
+      * @param sql SQL to run.
+      * @param params Parameters to pass to query.
+      * @return A list of @ref toQValues:s read from query
+      */
+    std::list<toQValue> readQuery(const QString &sql,
+                                  std::list<toQValue> &params);
+
     /** Execute a query and return all the values returned by it.
      * @param conn Connection to run query on.
      * @param sql SQL to run.
@@ -505,6 +533,7 @@ class toConnection : public QObject
     QString Database;
     QString Schema;
     QString Version;
+    QString Color;
     std::list<QPointer<QWidget> > Widgets;
     std::list<QString> InitStrings;
     std::set<QString> Options;
@@ -527,7 +556,7 @@ public:
     public:
         /** Create an empty exception
          */
-        exception() :QString()
+        exception() : QString()
         {
             Offset = -1;
         }
@@ -641,9 +670,10 @@ public:
 
         /** Return a string representation to address an object.
          * @param name The name to be quoted.
+         * @param quoteLowercase Enclose in quotes when identifier has lowercase letters
          * @return String addressing table.
          */
-        virtual QString quote(const QString &name)
+        virtual QString quote(const QString &name, const bool quoteLowercase = true)
         {
             return name;
         }
@@ -708,7 +738,7 @@ private:
 
     connectionImpl *Connection;
 
-class cacheObjects : public toTask
+    class cacheObjects : public toTask
     {
         QPointer<toConnection> Connection;
     public:
@@ -739,12 +769,14 @@ public:
      * @param host Host to connect to the database with.
      * @param database Database to connect to.
      * @param schema Default schema to switch to.
+     * @param color Highlighting color for GUI widgets
      * @param options Options used to connect to the database with.
      * @param cache Enable object cache for this connection.
      */
     toConnection(const QString &provider, const QString &user, const QString &password,
-                 const QString &host, const QString &database, const QString &schema, const std::set
-                 <QString> &options,
+                 const QString &host, const QString &database, const QString &schema,
+                 const QString &color,
+                 const std::set<QString> &options,
                  bool cache = true);
     /** Create a copy of a connection. Will not cache objects, so objects will never be available
      *  in a subconnection.
@@ -818,6 +850,16 @@ public:
     /** Get provider of connection.
      */
     const QString &provider() const;
+
+    QString color()
+    {
+        return Color;
+    }
+
+    void setColor(const QString & c)
+    {
+        Color = c;
+    }
 
     /** Change the current database. Observe that this only changes the record of what is the current database. You will still need
      * to change the database oppinion on what database is the current one.
@@ -980,9 +1022,10 @@ public:
 
     /** Return a string representation to address an object.
      * @param name The name to be quoted.
+     * @param quoteLowercase Enclose in quotes when identifier has lowercase letters
      * @return String addressing table.
      */
-    QString quote(const QString &name);
+    QString quote(const QString &name, const bool quoteLowercase = true);
     /** Perform the opposite of @ref quote.
      * @param name The name to be un-quoted.
      * @return String addressing table.

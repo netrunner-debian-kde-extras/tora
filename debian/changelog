@@ -1,3 +1,22 @@
+tora (2.1.2-1) unstable; urgency=low
+
+  * Improved: Add editor option for uppler/lowercase object names
+  * Improved: Db extract/compare tool now remembers widgets states
+  * New: Filesystem completer for target line edit
+  * Improved: Compatibility with sql+
+  * New: Color/pixmap identifier for connection
+  * Improved: Schema browser improvements
+  * New: Ability to add external static check
+  * New: Save package specification and body to one file
+  * New: Initial support for creating/modifying tables
+  * Bugfixes
+
+tora (2.1.1-1) unstable; urgency=low
+
+  * New upstream version
+
+ -- Nathan Neulinger <nneul@neulinger.org> Tue, 13 Oct 2009 13:44:40 -0600
+
 tora (2.1.0-1) unstable; urgency=low
 
   * New upstream version, the rebuild closes: #540046.

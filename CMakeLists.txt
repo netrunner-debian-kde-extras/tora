@@ -4,11 +4,14 @@
 # options available for user's input
 OPTION(WANT_DEBUG "Set the debug build and possible additional outputs" OFF)
 OPTION(WANT_INTERNAL_QSCINTILLA "Use internal/bundled QScintilla2 source" OFF)
-OPTION(ENABLE_ORACLE "Disable Oracle support at all. Including detection" ON)
-OPTION(ENABLE_PGSQL "Disable PostgreSQL support. Including detection" ON)
+OPTION(ENABLE_ORACLE "Enable/Disable Oracle support at all. Including detection" ON)
+OPTION(ENABLE_PGSQL "Enable/Disable PostgreSQL support. Including detection" ON)
+OPTION(ENABLE_DB2 "Enable/Disable DB2 support. Including detection" ON)
 OPTION(WANT_RPM "Enable additional RPM related stuff. Additional make package_rpm target" ON)
 OPTION(WANT_BUNDLE "Enable Mac OS X bundle build" OFF)
 OPTION(WANT_BUNDLE_STANDALONE "Do not copy required libs and tools into bundle (WANT_BUNDLE)" ON)
+OPTION(USE_TROTL "Use trotl OCI wrapper library" OFF)
+OPTION(USE_PCH "Use percompiled headers" OFF)
 
 #Set our CMake minimum version
 #Require 2.4.2 for Qt finding
@@ -48,7 +51,7 @@ PROJECT(TOra)
 #where VERSION_SUFFIX is of the form "", "cvs" or "Ncvs" (N being the minor patch level)
 SET (VERSION_MAJOR "2")
 SET (VERSION_MINOR "1")
-SET (VERSION_PATCH "1")
+SET (VERSION_PATCH "2")
 SET (VERSION_SUFFIX "")
 SET (VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}${VERSION_SUFFIX})
 MESSAGE(STATUS "TOra ${VERSION} will be built to install into ${CMAKE_INSTALL_PREFIX}")
@@ -86,8 +89,8 @@ endif (NOT TORA_DOC_DIR)
 ##############################################################################################################
 ########## check for the CPU we build for                                                           ##########
 
-IF (GCC)
-
+IF (CMAKE_COMPILER_IS_GNUCC)
+  
 EXECUTE_PROCESS(
     COMMAND ${CMAKE_C_COMPILER} -dumpmachine
     OUTPUT_VARIABLE MACHINE
@@ -113,7 +116,12 @@ IF (_machine_ppc)
     SET(ARCH_PPC 1)
 ENDIF (_machine_ppc)
 
-ENDIF (GCC)
+SET(CMAKE_CXX_FLAGS_RELEASE "-O2 ${CXX_WARNINGS}")
+SET(CMAKE_C_FLAGS_RELEASE "-O2 ${CXX_WARNINGS}")
+SET(CMAKE_CXX_FLAGS_DEBUG "-O0 ${CXX_WARNINGS} -ggdb3 -fno-inline -rdynamic")
+SET(CMAKE_C_FLAGS_DEBUG "-O0 ${CXX_WARNINGS} -gbdb3 -fno-inline -rdynamic")
+
+ENDIF (CMAKE_COMPILER_IS_GNUCC)
 
 #Convert our simpler command line option to the CMake style
 #None, Debug, Release, .. or custom ones
@@ -136,8 +144,6 @@ ELSE (MSVC)
 ENDIF (MSVC)
 
 
-SET(CMAKE_CXX_FLAGS_RELEASE "-O2 ${CXX_WARNINGS}")
-SET(CMAKE_C_FLAGS_RELEASE "-O2 ${CXX_WARNINGS}")
 # Required for win wjen there is used an external qscintilla lib
 IF (WIN32 AND NOT DEFINED WANT_INTERNAL_QSCINTILLA)
   SET(CMAKE_CXX_FLAGS_RELEASE "/DQSCINTILLA_DLL ${CMAKE_CXX_FLAGS_RELEASE}")
@@ -222,7 +228,7 @@ ELSE (NOT ENABLE_PGSQL)
     MESSAGE(" ")
     MESSAGE(WARNING " No PostgreSQL environment has been found.")
     MESSAGE(WARNING " Specify -DPOSTGRESQL_PATH_INCLUDES=path")
-    MESSAGE(WARNING " and -DPOSTGRESQL_PATH_LIB manually")
+    MESSAGE(WARNING "     and -DPOSTGRESQL_PATH_LIB=path manually")
 	#MESSAGE (STATUS "PostgreSQL includes: ${POSTGRESQL_INCLUDE_DIR} vs. ${POSTGRESQL_PATH_INCLUDES}")
 	#MESSAGE (STATUS "PostgreSQL libs: ${POSTGRESQL_LIBRARIES} vs. ${POSTGRESQL_PATH_LIB}")
     MESSAGE(" ")
@@ -230,6 +236,24 @@ ELSE (NOT ENABLE_PGSQL)
 
 ENDIF (NOT ENABLE_PGSQL)
 
+
+IF (NOT ENABLE_DB2)
+    MESSAGE(STATUS "DB2 support is disabled by user choice")
+ELSE (NOT ENABLE_DB2)
+
+    FIND_PACKAGE(DB2)
+    IF (DB2_FOUND)
+        ADD_DEFINITIONS(-DHAVE_DB2)
+    ELSE (DB2_FOUND)
+        MESSAGE(" ")
+        MESSAGE(WARNING " No DB2 client libraries have been found.")
+        MESSAGE(WARNING " TOra can be build without it - without DB2 support.")
+        MESSAGE(WARNING " Specify -DDB2_PATH_INCLUDES=path")
+        MESSAGE(WARNING "     and -DDB2_PATH_LIB=path manually")
+        MESSAGE(" ")
+    ENDIF (DB2_FOUND)
+
+ENDIF (NOT ENABLE_DB2)
 
 ##############################################################################################################
 ########## Include Setup                                                                            ##########

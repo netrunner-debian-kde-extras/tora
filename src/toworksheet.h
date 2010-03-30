@@ -92,7 +92,8 @@ class toWorksheet : public toToolWidget
     toResultTableView *Result;
     toResultPlan      *Plan;
     QWidget           *CurrentTab;
-    QString            QueryString;
+    QString            QueryString; // query is saved in order to reexecute it periodically ("refresh")
+    toSQLParse::statement::statementClass QueryStatementClass; // statement class has to be saved as well
     toResultItem      *Resources;
     toResultStats     *Statistics;
     toResultBar       *WaitChart;
@@ -115,6 +116,9 @@ class toWorksheet : public toToolWidget
 
     int RefreshSeconds;
     QTimer RefreshTimer;
+    
+    //! Flag to handle continue-on-error for executeAllAct
+    bool m_batchContinue;
 
     toEditableMenu *SavedMenu;
     toEditableMenu *InsertSavedMenu;
@@ -164,12 +168,13 @@ class toWorksheet : public toToolWidget
     QString duration(int, bool hundreds = true);
     void saveHistory(void);
     void viewResources(void);
-    void query(const QString &str, execType type);
+    void query(const QString &str, execType type, toSQLParse::statement::statementClass sc);
     virtual bool checkSave(bool input);
     void saveDefaults(void);
     void setup(bool autoLoad);
 
-    void execute(toSQLParse::tokenizer &tokens, int line, int pos, execType type);
+    void execute(toSQLParse::tokenizer &tokens, int line, int pos, execType typeto,
+                 toSQLParse::statement::statementClass sc);
 
     void insertStatement(const QString &);
 

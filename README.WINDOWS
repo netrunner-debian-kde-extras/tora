@@ -1,3 +1,6 @@
+There is also a Mingw32 Fedora 11 Cross Compile build - see the README file
+in the win32-cross directory, which also contains utility scripts for that build.
+
 Content:
 - Building with MSVC - CMake
 - Building Windows installer.
@@ -61,13 +64,32 @@ set ORACLE_HOME=c:\build\oracle
 
   8. Compile Tora - read README.CMAKE and dont forget to check environment is in 5.
      Example:
-c:\
+c:
 cd \build\tora-build
 set PATH=%PATH%;c:\build\qt\bin
+
+# If you need to refresh from cmake, otherwise skip this step
 cmake -G "NMake Makefiles" -DWANT_INTERNAL_QSCINTILLA=1 -DCMAKE_INSTALL_PREFIX=c:\build\tora-build\RELEASE -DORACLE_OCI_VERSION=10G_R2 ..\tora
+
      Misc notes: seting ORACLE_HOME is a good thing (TM)
                  building with internal qscintilla is easier for beginners ;)
                  prepare for longer headache (if you're a windows devel newbie) 
+
+nmake
+     Issuing nmake will actually run the build process itself.
+
+#
+# Testing
+#
+Above build will generate into the tora-build\RELEASE dir. Copy the various dll files from Qt, Postgres, MySQL 
+installs into that dir as well: 
+	comerr32.dll gssapi32.dll k5sprt32.dll krb5_32.dll libeay32.dll libiconv-2.dll libintl-8.dll libpq.dll ssleay32.dll
+	libmysql.dll qsqlmysqld4.dll
+	oci.dll 
+	QtCore4.dll QtGui4.dll QtNetwork4.dll QtSql4.dll QtXml4.dll 
+Then you should be able to run tora.exe from that dir. This can be used to test prior to packaging.
+
+(NOTE- Above is ghastly, surely there is a better way of doing this?!?!)
 
 #
 # Building Windows installer.

@@ -2,39 +2,39 @@
 /* BEGIN_COMMON_COPYRIGHT_HEADER
  *
  * TOra - An Oracle Toolkit for DBA's and developers
- * 
+ *
  * Shared/mixed copyright is held throughout files in this product
- * 
+ *
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
  * Portions Copyright (C) 2004-2009 Numerous Other Contributors
- * 
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation;  only version 2 of
  * the License is valid for this program.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
- * 
+ *
  *      As a special exception, you have permission to link this program
  *      with the Oracle Client libraries and distribute executables, as long
  *      as you follow the requirements of the GNU GPL in regard to all of the
  *      software in the executable aside from Oracle client libraries.
- * 
+ *
  *      Specifically you are not permitted to link this program with the
  *      Qt/UNIX, Qt/Windows or Qt Non Commercial products of TrollTech.
  *      And you are not permitted to distribute binaries compiled against
- *      these libraries. 
- * 
+ *      these libraries.
+ *
  *      You may link this product with any GPL'd Qt library.
- * 
+ *
  * All trademarks belong to their respective owners.
  *
  * END_COMMON_COPYRIGHT_HEADER */
@@ -45,6 +45,9 @@
 #include <QMdiArea>
 #include <QSettings>
 #include <QTreeView>
+#include <QDebug>
+#include <QTemporaryFile>
+#include <QProcess>
 
 #include "config.h"
 #include "utils.h"
@@ -65,6 +68,7 @@
 #include "icons/toworksheet.xpm"
 #include "icons/nextbug.xpm"
 #include "icons/prevbug.xpm"
+#include "icons/checkcode.xpm"
 
 
 class toPLSQLEditorTool : public toTool
@@ -116,8 +120,8 @@ QString toPLSQLEditor::editorName(const QString &schema, const QString &object, 
 QString toPLSQLEditor::editorName(toPLSQLWidget *text)
 {
     return editorName(text->editor()->schema(),
-                       text->editor()->object(),
-                       text->editor()->type());
+                      text->editor()->object(),
+                      text->editor()->type());
 }
 
 QString toPLSQLEditor::currentSchema(void)
@@ -126,14 +130,14 @@ QString toPLSQLEditor::currentSchema(void)
 }
 
 bool toPLSQLEditor::viewSource(const QString &schema, const QString &name, const QString &type,
-                         int line, bool setCurrent)
+                               int line, bool setCurrent)
 {
     try
     {
         toPLSQLWidget *editor = NULL;
         int row = line - 1;
         int col = 0;
-        for (int i = 0;i < Editors->count();i++)
+        for (int i = 0; i < Editors->count(); i++)
         {
             QString tabname = editorName(schema, name, type);
             toPLSQLWidget *te = dynamic_cast<toPLSQLWidget *>(Editors->widget(i));
@@ -156,6 +160,8 @@ bool toPLSQLEditor::viewSource(const QString &schema, const QString &name, const
         {
             editor->editor()->getCursorPosition(&row, &col);
         }
+        // set pointer to this PLSQLEditor to be used when saving packages/types
+        editor->editor()->setEditor(this);
         if (editor->editor()->lines() <= 1)
         {
             editor->editor()->setData(schema, type, name);
@@ -183,7 +189,7 @@ bool toPLSQLEditor::viewSource(const QString &schema, const QString &name, const
 }
 
 toPLSQLEditor::toPLSQLEditor(QWidget *main, toConnection &connection)
-    : toToolWidget(PLSQLEditorTool, "plsqleditor.html", main, connection, "toPLSQLEditor")
+        : toToolWidget(PLSQLEditorTool, "plsqleditor.html", main, connection, "toPLSQLEditor")
 {
     createActions();
     QToolBar *toolbar = toAllocBar(this, tr("PLSQLEditor"));
@@ -206,6 +212,11 @@ toPLSQLEditor::toPLSQLEditor(QWidget *main, toConnection &connection)
     toolbar->addAction(newSheetAct);
     toolbar->addAction(compileAct);
     toolbar->addAction(compileWarnAct);
+    // only show static check button when static checker is specified
+    if (!toConfigurationSingle::Instance().staticChecker().isEmpty())
+    {
+        toolbar->addAction(checkCodeAct);
+    }
 
     toolbar->addSeparator();
 
@@ -221,7 +232,7 @@ toPLSQLEditor::toPLSQLEditor(QWidget *main, toConnection &connection)
     CodeModel = new toCodeModel(Objects);
     Objects->setModel(CodeModel);
     QString selected = Schema->currentText();
-    if(!selected.isEmpty())
+    if (!selected.isEmpty())
         CodeModel->refresh(connection, selected);
     // even better (?) for reopening the tabs
 //     connect(Objects->selectionModel(),
@@ -229,7 +240,7 @@ toPLSQLEditor::toPLSQLEditor(QWidget *main, toConnection &connection)
 //             this,
 //             SLOT(changePackage(const QModelIndex &, const QModelIndex &)));
     connect(Objects, SIGNAL(doubleClicked(const QModelIndex &)),
-             this, SLOT(changePackage(const QModelIndex &)));
+            this, SLOT(changePackage(const QModelIndex &)));
 
     splitter->addWidget(Objects);
 
@@ -260,6 +271,8 @@ toPLSQLEditor::toPLSQLEditor(QWidget *main, toConnection &connection)
     s.beginGroup("toPLSQLEditor");
     splitter->restoreState(s.value("splitter").toByteArray());
     s.endGroup();
+
+    conn = &connection;
 
     refresh();
 }
@@ -297,8 +310,8 @@ void toPLSQLEditor::createActions(void)
     compileAct->setShortcut(Qt::Key_F9);
 
     compileWarnAct = new QAction(QIcon(QPixmap(const_cast<const char**>(compilewarning_xpm))),
-                             tr("&Compile with Warnings"),
-                             this);
+                                 tr("&Compile with Warnings"),
+                                 this);
     connect(compileWarnAct,
             SIGNAL(triggered()),
             this,
@@ -341,6 +354,17 @@ void toPLSQLEditor::createActions(void)
             SLOT(prevError()),
             Qt::QueuedConnection);
     previousErrorAct->setShortcut(Qt::CTRL + Qt::Key_P);
+
+    // tool button to check code
+    checkCodeAct = new QAction(QIcon(QPixmap(const_cast<const char**>(checkcode_xpm))),
+                               tr("&Check Code"),
+                               this);
+    connect(checkCodeAct,
+            SIGNAL(triggered()),
+            this,
+            SLOT(checkCode()),
+            Qt::QueuedConnection);
+    checkCodeAct->setShortcut(Qt::CTRL + Qt::Key_G); // TODO: change shortcut to something meaningful :)
 }
 
 toPLSQLWidget *toPLSQLEditor::currentEditor(void)
@@ -366,12 +390,12 @@ void toPLSQLEditor::refresh(void)
             Schema->clear();
             toQList users = toQuery::readQuery(connection(),
                                                toSQL::string(toSQL::TOSQL_USERLIST, connection()));
-            for (toQList::iterator i = users.begin();i != users.end();i++)
+            for (toQList::iterator i = users.begin(); i != users.end(); i++)
                 Schema->addItem(*i);
         }
         if (!selected.isEmpty())
         {
-            for (int i = 0;i < Schema->count();i++)
+            for (int i = 0; i < Schema->count(); i++)
             {
                 if (Schema->itemText(i) == selected)
                 {
@@ -415,6 +439,30 @@ void toPLSQLEditor::changePackage(const QModelIndex &current)
     changePackage(current, QModelIndex());
 }
 
+static toSQL SQLHasCode("toPLSQLEditor:HasCode",
+                        "SELECT count(1) FROM all_source\n"
+                        " WHERE OWNER = :f1<char[101]>\n"
+                        "   AND NAME = :f2<char[101]>\n"
+                        "   AND TYPE = :f3<char[101]>\n",
+                        "Checks if given object has any source");
+// checks if given object has any source code
+bool toPLSQLEditor::hasCode(const QString &pSchema, const QString &pType, const QString &pName)
+{
+    int numberOfLines;
+
+    try
+    {
+        toQuery lines(*conn, SQLHasCode, pSchema, pName, pType);
+        numberOfLines = lines.readValue().toInt();
+        if (numberOfLines > 0)
+            return true;
+        else
+            return false;
+    }
+    TOCATCH
+    return true; // try displaying the code in case of error
+} // hasCode
+
 void toPLSQLEditor::changePackage(const QModelIndex &current, const QModelIndex &previous)
 {
     toBusy busy;
@@ -424,12 +472,13 @@ void toPLSQLEditor::changePackage(const QModelIndex &current, const QModelIndex 
     if (item && item->parent())
     {
         QString ctype = item->parent()->display();
-        if(ctype.isEmpty() || ctype == "Code")
+        if (ctype.isEmpty() || ctype == "Code")
             return;
         ctype = ctype.toUpper();
 
         viewSource(Schema->currentText(), item->display(), ctype, 0);
-        if (ctype == "PACKAGE" || ctype == "TYPE")
+        if (ctype == "PACKAGE" ||
+                (ctype == "TYPE" && hasCode(Schema->currentText(), item->display(), ctype + " BODY")))
             viewSource(Schema->currentText(), item->display(), ctype + " BODY", 0);
     }
 #ifdef AUTOEXPAND
@@ -539,7 +588,6 @@ void toPLSQLEditor::closeAllEditor()
     }
 }
 
-
 void toPLSQLEditor::closeEditor(toPLSQLWidget* &editor)
 {
 
@@ -557,3 +605,119 @@ void toPLSQLEditor::closeEditor(toPLSQLWidget* &editor)
             newSheet();
     }
 }
+
+/* Purpose: should find and return object containing another part of package.
+   For example if specification of package A is given as parameter it should
+   find toPLSQLText object containing body of the same package.
+*/
+toPLSQLText * toPLSQLEditor::getAnotherPart(QString &pSchema, QString &pObject, QString &pType)
+{
+    QString other_part_type;
+    toPLSQLText * ret = NULL;
+
+    if (pType == "PACKAGE")
+        other_part_type = "PACKAGE BODY";
+    else
+        other_part_type = "PACKAGE";
+
+    for (int i = 0; i < Editors->count(); i++)
+    {
+        toPLSQLWidget *te = dynamic_cast<toPLSQLWidget *>(Editors->widget(i));
+        if ((te->editor()->schema() == pSchema) &&
+                (te->editor()->object() == pObject) &&
+                (te->editor()->type()   == other_part_type))
+        {
+            ret = te->editor();
+            break;
+        }
+    }
+
+    return ret;
+} // getAnotherPart
+
+void toPLSQLEditor::parseResults(const QString buf, QMultiMap<int, QString> &res)
+{
+    // TODO: probably a problem on Mac as it has \r as new line character?
+    QStringList list = buf.split("\n", QString::SkipEmptyParts);
+    int j;
+    for (int i = 0; i < list.size(); i++)
+    {
+        j = list[i].indexOf(":");
+        res.insert(list[i].left(j).trimmed().toInt(), list[i].right(list[i].length() - j - 1).trimmed());
+    }
+} // parseResults
+
+/* Purpose: calls external static code test tool and display it's results
+   TODO: call only selected part of code (if something is selected)
+*/
+void toPLSQLEditor::checkCode(void)
+{
+    if (currentEditor()->editor()->text().isEmpty())
+    {
+        // do nothing if code text is empty
+        return;
+    }
+
+    QTemporaryFile tf;
+    if (tf.open())
+    {
+        if (!toWriteFile(tf.fileName(), currentEditor()->editor()->text()))
+        {
+#ifdef DEBUG
+            qDebug() << "Unable to write file (" + tf.fileName() + ")";
+#endif
+            return;
+        }
+        else
+        {
+#ifdef DEBUG
+            qDebug() << "Success!!! Temporary file " + tf.fileName();
+#endif
+        }
+    }
+
+    QString program = toConfigurationSingle::Instance().staticChecker().arg(tf.fileName());
+#ifdef DEBUG
+    qDebug() << "program to be executed: " + program;
+#endif
+    QProcess staticCheck(qApp);
+
+    staticCheck.setProcessChannelMode(QProcess::MergedChannels);
+    staticCheck.start(program);
+    staticCheck.waitForFinished(); // default timeout - 30000 miliseconds
+
+    int exit_code = staticCheck.exitStatus();
+    if (exit_code != 0)
+    {
+#ifdef DEBUG
+        qDebug() << "Error executing static check. Exit code = " << exit_code;
+        int run_error = staticCheck.error();
+        // error values taken from Qt4.6 documentation for QProcess
+        switch (run_error)
+        {
+        case 0:
+            qDebug() << "The process failed to start. Either the invoked program is missing, or you may have insufficient permissions to invoke the program.";
+            break;
+        case 1:
+            qDebug() << "The process crashed some time after starting successfully.";
+            break;
+        case 5:
+            qDebug() << "An unknown error occurred.";
+            break;
+        default:
+            qDebug() << "Error code: " << run_error << "--" << staticCheck.errorString();
+        } // switch
+#endif
+        return;
+    }
+    QString qq = staticCheck.readAllStandardOutput();
+#ifdef DEBUG
+    qDebug() << "stdout" << qq;
+#endif
+
+    QMultiMap<int, QString> Observations;
+    parseResults(qq, Observations);
+    currentEditor()->editor()->setErrors(Observations, false);
+    currentEditor()->applyResult("STATIC", Observations);
+    currentEditor()->resizeResults();
+} // checkCode

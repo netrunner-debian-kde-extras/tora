@@ -39,6 +39,7 @@ tora_LDADD = $(ORACLE_LIBS) $(PQ_LIBS) $(@TORA_LINK_OTHERS@)
 
 if HAVE_ORACLE
 EXTRA_ORACLE_MONO_SOURCE = tooracleconnection.cpp tooraclesetting.h \
+	tooracletable.cpp \
 	tooracleextract.cpp otl/otlv4.h
 EXTRA_ORACLE_MONO_SOURCE_MOC = moc_tooraclesetting.cpp
 endif
@@ -253,7 +254,8 @@ UI_FILES = toaboutui.ui \
 		tostorageprefsui.ui \
 		todroptablespaceui.ui \
 		toscriptschemawidgetui.ui \
-		shortcuteditor/shortcuteditordialog.ui
+		shortcuteditor/shortcuteditordialog.ui \
+		connectioncolorsdialogui.ui
 
 
 EXTRA_DIST = icons \
@@ -274,6 +276,13 @@ EXTRA_DIST = icons \
 	toocistub.cpp \
 	tooraclepreload.cpp \
 	toresultresources.h \
+	tooracleextract.h \
+	tologger.h \
+	ts_log/critical_section.h \
+	ts_log/decorator.h \
+	ts_log/message_handler_log.h \
+	ts_log/thread_safe_log.h \
+	ts_log/ts_log_utils.h \
 	$(TRANSLATIONS) \
 	LICENSE.h \
 	tora.qrc \
@@ -467,6 +476,7 @@ BUILT_SOURCES = \
 	ui_toworksheetsetupui.h \
 	ui_tohelpui.h \
 	ui_toscriptschemawidgetui.h \
+	ui_connectioncolorsdialogui.h \
 	shortcuteditor/ui_shortcuteditordialog.h \
 	$(EXTRA_ORACLE_MONO_SOURCE_MOC) \
 	$(filter %.qm,$(TRANSLATIONS:%.ts=%.qm)) \
