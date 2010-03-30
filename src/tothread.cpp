@@ -40,6 +40,9 @@
  * END_COMMON_COPYRIGHT_HEADER */
 
 #include "utils.h"
+#ifdef DEBUG
+#include "tologger.h"
+#endif
 
 #include "tomain.h"
 #include "tothread.h"
@@ -79,6 +82,8 @@ int toSemaphore::getValue(void)
     return val;
 }
 
+QThreadStorage<toThreadInfo*> toThread::toThreadInfoStorage;
+volatile unsigned toThread::lastThreadNumber = 0;
 std::list<toThread *> *toThread::Threads;
 toLock *toThread::Lock;
 QThread *toThread::MainThread = NULL;
@@ -141,6 +146,7 @@ void taskRunner::run(void)
     {
         toThread::Lock->lock ()
         ;
+        toThread::toThreadInfoStorage.setLocalData(new toThreadInfo(++toThread::lastThreadNumber));
         StartSemaphore.up();
         toThread::mainThread();
         toThread::Lock->unlock();
@@ -178,4 +184,17 @@ void taskRunner::run(void)
             i++;
     }
     toThread::Lock->unlock();
+}
+
+toThreadInfo::toThreadInfo(unsigned number) :threadNumber(number), threadTask("")
+{
+#ifdef DEBUG
+    get_log(0).ts<toDecorator>( __HERE__) << "Thread no: " << threadNumber << " started." << std::endl;
+#endif
+}
+toThreadInfo::~toThreadInfo()
+{
+#ifdef DEBUG
+    get_log(0).ts<toDecorator>( __HERE__) << "Thread no: " << threadNumber << " exited." << std::endl;
+#endif
 }

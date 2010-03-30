@@ -1,3 +1,43 @@
+/* BEGIN_COMMON_COPYRIGHT_HEADER
+ *
+ * TOra - An Oracle Toolkit for DBA's and developers
+ *
+ * Shared/mixed copyright is held throughout files in this product
+ *
+ * Portions Copyright (C) 2000-2001 Underscore AB
+ * Portions Copyright (C) 2003-2005 Quest Software, Inc.
+ * Portions Copyright (C) 2004-2008 Numerous Other Contributors
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation;  only version 2 of
+ * the License is valid for this program.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ *
+ *      As a special exception, you have permission to link this program
+ *      with the Oracle Client libraries and distribute executables, as long
+ *      as you follow the requirements of the GNU GPL in regard to all of the
+ *      software in the executable aside from Oracle client libraries.
+ *
+ *      Specifically you are not permitted to link this program with the
+ *      Qt/UNIX, Qt/Windows or Qt Non Commercial products of TrollTech.
+ *      And you are not permitted to distribute binaries compiled against
+ *      these libraries.
+ *
+ *      You may link this product with any GPL'd Qt library.
+ *
+ * All trademarks belong to their respective owners.
+ *
+ * END_COMMON_COPYRIGHT_HEADER */
+
 #include "toconfiguration.h"
 
 // #include <qapplication.h>
@@ -41,6 +81,7 @@ public:
     QString m_refresh;
     bool    m_highlight;
     bool    m_keywordUpper;
+    bool    m_objectNamesUpper;
     QString m_pluginDir;
     QString m_cacheDir;
     bool    m_cacheDisk;
@@ -63,9 +104,12 @@ public:
     int     m_autoLong;
     bool    m_messageStatusbar;
     bool    m_tabbedTools;
+    bool    m_colorizedConnections;
+    ConnectionColors m_connectionColors;
     int     m_objectCache;
     bool    m_bkgndConnect;
     bool    m_firewallMode;
+    int     m_connTestInterval;
     int     m_maxContent;
     bool    m_keepPlans;
     bool    m_vsqlPlans;
@@ -91,6 +135,7 @@ public:
     QString m_smtp;
     int     m_smtpPort;
     QString m_style;
+    QString m_staticChecker; // path+name to static check script (used in code editor)
 
     // tooracleconnection
     int m_openCursors;
@@ -192,6 +237,7 @@ public:
     QString m_syntaxErrorBg;
     QString m_syntaxDebugBg;
     QString m_syntaxCurrentLineMarker;
+    QString m_syntaxStaticBg;
     bool    m_useMaxTextWidthMark;
     int     m_maxTextWidthMark;
 
@@ -258,6 +304,7 @@ public:
         m_refresh = s.value(CONF_REFRESH, DEFAULT_REFRESH).toString();
         m_highlight = s.value(CONF_HIGHLIGHT, true).toBool();
         m_keywordUpper = s.value(CONF_KEYWORD_UPPER, DEFAULT_KEYWORD_UPPER).toBool();
+        m_objectNamesUpper = s.value(CONF_OBJECT_NAMES_UPPER, DEFAULT_OBJECT_NAMES_UPPER).toBool();
 
         m_pluginDir = s.value(CONF_PLUGIN_DIR, DEFAULT_PLUGIN_DIR).toString();
         m_cacheDir = s.value(CONF_CACHE_DIR, "").toString();
@@ -286,10 +333,26 @@ public:
         m_dontReread = s.value(CONF_DONT_REREAD, true).toBool();
         m_autoLong = s.value(CONF_AUTO_LONG, 0).toInt();
         m_messageStatusbar = s.value(CONF_MESSAGE_STATUSBAR, false).toBool();
-        m_tabbedTools = s.value(CONF_TABBED_TOOLS, false).toBool();
+        m_tabbedTools = s.value(CONF_TABBED_TOOLS, true).toBool();
+        m_colorizedConnections = s.value("ColorizedConnections", true).toBool();
+        cnt = s.beginReadArray("ConnectionColors");
+        for (int i = 0; i < cnt; ++i)
+        {
+            s.setArrayIndex(i);
+            m_connectionColors[s.value("key").toString()] = s.value("value").toString();
+        }
+        s.endArray();
+        if (m_connectionColors.count() == 0)
+        {
+            m_connectionColors["#FF0000"] = "Production";
+            m_connectionColors["#00FF00"] = "Development";
+            m_connectionColors["#0000FF"] = "Testing";
+        }
+
         m_objectCache = s.value(CONF_OBJECT_CACHE, DEFAULT_OBJECT_CACHE).toInt();
         m_bkgndConnect = s.value(CONF_BKGND_CONNECT, false).toBool();
         m_firewallMode = s.value(CONF_FIREWALL_MODE, false).toBool();
+        m_connTestInterval = s.value(CONF_CONN_TEST_INTERVAL, DEFAULT_CONN_TEST_INTERVAL).toInt();
         m_maxContent = s.value(CONF_MAX_CONTENT, DEFAULT_MAX_CONTENT).toInt();
         m_keepPlans = s.value(CONF_KEEP_PLANS, false).toBool();
         m_vsqlPlans = s.value(CONF_VSQL_PLANS, true).toBool();
@@ -317,6 +380,7 @@ public:
         m_smtp = s.value(CONF_SMTP, DEFAULT_SMTP).toString();
         m_smtpPort = s.value(CONF_SMTP_PORT, DEFAULT_SMTP_PORT).toInt();
         m_style = s.value(CONF_STYLE, DEFAULT_STYLE).toString();
+        m_staticChecker = s.value(CONF_STATIC_CHECKER, "").toString();
         // tooracleconnection.cpp
         m_openCursors = s.value(CONF_OPEN_CURSORS, DEFAULT_OPEN_CURSORS).toInt();
         m_maxLong = s.value(CONF_MAX_LONG, DEFAULT_MAX_LONG).toInt();
@@ -427,6 +491,7 @@ public:
         m_syntaxErrorBg = s.value("SyntaxErrorBg", "darkred").toString();
         m_syntaxDebugBg = s.value("SyntaxDebugBg", "darkgreen").toString();
         m_syntaxCurrentLineMarker = s.value("SyntaxCurrentLineMarker", "whitesmoke").toString();
+        m_syntaxStaticBg = s.value("SyntaxStaticBg", "darkblue").toString();
         m_useMaxTextWidthMark = s.value("useMaxTextWidthMark", false).toBool();
         m_maxTextWidthMark = s.value("maxTextWidthMark", 75).toInt();
         s.endGroup();
@@ -477,6 +542,7 @@ public:
         s.setValue(CONF_REFRESH, m_refresh);
         s.setValue(CONF_HIGHLIGHT, m_highlight);
         s.setValue(CONF_KEYWORD_UPPER, m_keywordUpper);
+        s.setValue(CONF_OBJECT_NAMES_UPPER, m_objectNamesUpper);
         s.setValue(CONF_PLUGIN_DIR, m_pluginDir);
         s.setValue(CONF_CACHE_DIR, m_cacheDir);
         s.setValue(CONF_CACHE_DISK, m_cacheDisk);
@@ -499,9 +565,22 @@ public:
         s.setValue(CONF_AUTO_LONG, m_autoLong);
         s.setValue(CONF_MESSAGE_STATUSBAR, m_messageStatusbar);
         s.setValue(CONF_TABBED_TOOLS, m_tabbedTools);
+
+        s.setValue("ColorizedConnections", m_colorizedConnections);
+        s.beginWriteArray("ConnectionColors");
+        for (int i = 0; i < m_connectionColors.count(); ++i)
+        {
+            s.setArrayIndex(i);
+            key = m_connectionColors.keys().at(i);
+            s.setValue("key", key);
+            s.setValue("value", m_connectionColors[key]);
+        }
+        s.endArray();
+        
         s.setValue(CONF_OBJECT_CACHE, m_objectCache);
         s.setValue(CONF_BKGND_CONNECT, m_bkgndConnect);
         s.setValue(CONF_FIREWALL_MODE, m_firewallMode);
+        s.setValue(CONF_CONN_TEST_INTERVAL, m_connTestInterval);
         s.setValue(CONF_MAX_CONTENT, m_maxContent);
         s.setValue(CONF_KEEP_PLANS, m_keepPlans);
         s.setValue(CONF_VSQL_PLANS, m_vsqlPlans);
@@ -528,6 +607,8 @@ public:
         s.setValue(CONF_SMTP, m_smtp);
         s.setValue(CONF_SMTP_PORT, m_smtpPort);
         s.setValue(CONF_STYLE, m_style);
+        s.setValue(CONF_STATIC_CHECKER, m_staticChecker);
+
         // tooracleconnection
         s.setValue(CONF_OPEN_CURSORS, m_openCursors);
         s.setValue(CONF_MAX_LONG, m_maxLong);
@@ -646,6 +727,7 @@ public:
         s.setValue("SyntaxErrorBg", m_syntaxErrorBg);
         s.setValue("SyntaxDebugBg", m_syntaxDebugBg);
         s.setValue("SyntaxCurrentLineMarker", m_syntaxCurrentLineMarker);
+        s.setValue("SyntaxStaticBg", m_syntaxStaticBg);
         s.setValue("useMaxTextWidthMark", m_useMaxTextWidthMark);
         s.setValue("maxTextWidthMark", m_maxTextWidthMark);
         s.endGroup();
@@ -903,6 +985,16 @@ void toConfiguration::setSyntaxCurrentLineMarker(QColor v)
     p->m_syntaxCurrentLineMarker = v.name();
 }
 
+QColor toConfiguration::syntaxStaticBg()
+{
+    QColor c;
+    c.setNamedColor(p->m_syntaxStaticBg);
+    return c;
+}
+void toConfiguration::setSyntaxStaticBg(QColor v)
+{
+    p->m_syntaxStaticBg = v.name();
+}
 
 QString toConfiguration::provider()
 {
@@ -1053,6 +1145,15 @@ bool toConfiguration::keywordUpper()
 void toConfiguration::setKeywordUpper(bool v)
 {
     p->m_keywordUpper = v;
+}
+
+bool toConfiguration::objectNamesUpper()
+{
+    return p->m_objectNamesUpper;
+}
+void toConfiguration::setObjectNamesUpper(bool v)
+{
+    p->m_objectNamesUpper = v;
 }
 
 QString toConfiguration::pluginDir()
@@ -1253,6 +1354,23 @@ void toConfiguration::setTabbedTools(bool v)
     p->m_tabbedTools = v;
 }
 
+bool toConfiguration::colorizedConnections()
+{
+    return p->m_colorizedConnections;
+}
+void toConfiguration::setColorizedConnections(bool v)
+{
+    p->m_colorizedConnections = v;
+}
+ConnectionColors toConfiguration::connectionColors()
+{
+    return p->m_connectionColors;
+}
+void toConfiguration::setConnectionColors(const ConnectionColors & v)
+{
+    p->m_connectionColors = v;
+}
+
 int toConfiguration::objectCache()
 {
     return p->m_objectCache;
@@ -1278,6 +1396,15 @@ bool toConfiguration::firewallMode()
 void toConfiguration::setFirewallMode(bool v)
 {
     p->m_firewallMode = v;
+}
+
+int toConfiguration::connTestInterval()
+{
+    return p->m_connTestInterval;
+}
+void toConfiguration::setConnTestInterval(int v)
+{
+    p->m_connTestInterval = v;
 }
 
 int toConfiguration::maxContent()
@@ -2068,3 +2195,13 @@ QByteArray toConfiguration::rightDockbarState()
 {
     return p->m_rightDockbarState;
 }
+
+// code editor
+QString toConfiguration::staticChecker()
+{
+    return p->m_staticChecker;
+} // staticChecker
+void toConfiguration::setStaticChecker(const QString & v)
+{
+    p->m_staticChecker = v;
+} // setStaticChecker

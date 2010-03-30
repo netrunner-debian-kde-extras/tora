@@ -73,6 +73,7 @@ toSyntaxSetup::toSyntaxSetup(QWidget *parent, const char *name, Qt::WFlags fl)
 
     setupUi(this);
     KeywordUpper->setChecked(toConfigurationSingle::Instance().keywordUpper());
+    ObjectNamesUpper->setChecked(toConfigurationSingle::Instance().objectNamesUpper());
     SyntaxHighlighting->setChecked(toConfigurationSingle::Instance().highlight());
     EdgeMarkCheckBox->setChecked(toConfigurationSingle::Instance().useMaxTextWidthMark());
     EdgeSizeSpinBox->setValue(toConfigurationSingle::Instance().maxTextWidthMark());
@@ -85,6 +86,7 @@ toSyntaxSetup::toSyntaxSetup(QWidget *parent, const char *name, Qt::WFlags fl)
     Extensions->setText(toConfigurationSingle::Instance().extensions());
     TabStop->setValue(toMarkedText::defaultTabWidth());
     TabSpaces->setChecked(toConfigurationSingle::Instance().tabSpaces());
+    EStaticChecker->setText(toConfigurationSingle::Instance().staticChecker());
 
     {
         QFont font(toStringToFont(toConfigurationSingle::Instance().codeFont()));
@@ -126,6 +128,7 @@ toSyntaxSetup::toSyntaxSetup(QWidget *parent, const char *name, Qt::WFlags fl)
         INIT_COL(toSyntaxAnalyzer::ErrorBg);
         INIT_COL(toSyntaxAnalyzer::DebugBg);
         INIT_COL(toSyntaxAnalyzer::CurrentLineMarker);
+        INIT_COL(toSyntaxAnalyzer::StaticBg);
     }
     TOCATCH;
 
@@ -198,6 +201,8 @@ toSyntaxAnalyzer::infoType toSyntaxAnalyzer::typeString(const QString &str)
         return DebugBg;
     if (str == "Current line highlight")
         return CurrentLineMarker;
+    if (str == "Static check background")
+        return StaticBg;
     throw qApp->translate("toSyntaxAnalyzer", "Unknown type");
 }
 
@@ -223,6 +228,8 @@ QString toSyntaxAnalyzer::typeString(infoType typ)
         return "Debug background";
     case CurrentLineMarker:
         return "Current line highlight";
+    case StaticBg:
+        return "Static check background";
     }
     throw qApp->translate("toSyntaxAnalyzer", "Unknown type");
 }
@@ -240,6 +247,7 @@ void toSyntaxAnalyzer::updateSettings(void)
         Colors[ErrorBg] = toConfigurationSingle::Instance().syntaxErrorBg();
         Colors[DebugBg] = toConfigurationSingle::Instance().syntaxDebugBg();
         Colors[CurrentLineMarker] = toConfigurationSingle::Instance().syntaxCurrentLineMarker();
+        Colors[StaticBg] = toConfigurationSingle::Instance().syntaxStaticBg();
     }
     TOCATCH
 }
@@ -352,6 +360,7 @@ void toSyntaxSetup::saveSetting(void)
     toConfigurationSingle::Instance().setUseMaxTextWidthMark(EdgeMarkCheckBox->isChecked());
     toConfigurationSingle::Instance().setMaxTextWidthMark(EdgeSizeSpinBox->value());
     toConfigurationSingle::Instance().setKeywordUpper(KeywordUpper->isChecked());
+    toConfigurationSingle::Instance().setObjectNamesUpper(ObjectNamesUpper->isChecked());
     toConfigurationSingle::Instance().setCodeCompletion(highlight && CodeCompletion->isChecked());
     toConfigurationSingle::Instance().setCodeCompletionSort(CompletionSort->isChecked());
     toConfigurationSingle::Instance().setUseEditorShortcuts(EditorShortcuts->isChecked());
@@ -381,7 +390,9 @@ void toSyntaxSetup::saveSetting(void)
     toConfigurationSingle::Instance().setSyntaxDebugBg(C2T(toSyntaxAnalyzer::DebugBg));
     toConfigurationSingle::Instance().setSyntaxErrorBg(C2T(toSyntaxAnalyzer::ErrorBg));
     toConfigurationSingle::Instance().setSyntaxCurrentLineMarker(C2T(toSyntaxAnalyzer::CurrentLineMarker));
+    toConfigurationSingle::Instance().setSyntaxStaticBg(C2T(toSyntaxAnalyzer::StaticBg));
 
     toSyntaxAnalyzer::defaultAnalyzer().updateSettings();
     toConfigurationSingle::Instance().setExtensions(Extensions->text());
+    toConfigurationSingle::Instance().setStaticChecker(EStaticChecker->text());
 }

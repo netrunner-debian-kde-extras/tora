@@ -76,6 +76,8 @@
 #define CONF_HIGHLIGHT  "SyntaxHighlight"
 #define CONF_KEYWORD_UPPER "KeywordUpper"
 #define DEFAULT_KEYWORD_UPPER false
+#define CONF_OBJECT_NAMES_UPPER "ObjectNamesUpper"
+#define DEFAULT_OBJECT_NAMES_UPPER false
 #define CONF_COLOR  "KeywordColor"
 #define CONF_PLUGIN_DIR  "PluginDir"
 #define CONF_CACHE_DIR  "CacheDir"
@@ -114,6 +116,8 @@
 #define DEFAULT_OBJECT_CACHE 1
 #define CONF_BKGND_CONNECT "BackgroundConnect"
 #define CONF_FIREWALL_MODE "FirewallMode"
+#define CONF_CONN_TEST_INTERVAL "Connection test interval"
+#define DEFAULT_CONN_TEST_INTERVAL 5000
 #define CONF_MAX_CONTENT "MaxContent"
 #define DEFAULT_MAX_CONTENT 100
 #define CONF_KEEP_PLANS  "KeepPlans" // default: false
@@ -160,6 +164,8 @@
 #define DEFAULT_SMTP_PORT 25
 #define CONF_STYLE  "Style"
 #define DEFAULT_STYLE "" //"Cleanlooks"
+// code editor
+#define CONF_STATIC_CHECKER "StaticChecker"
 // tooracleconnection.cpp
 #define CONF_OPEN_CURSORS "OpenCursors"
 #define DEFAULT_OPEN_CURSORS 40  // Defined to be able to update tuning view

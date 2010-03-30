@@ -20,6 +20,8 @@ typedef QMap<QString, QString> TemplatesMap;
 typedef QMapIterator<QString, QString> TemplatesMapIterator;
 typedef QMap<QString,QVariant> EditorShortcutsMap;
 typedef QMapIterator<QString, QVariant> EditorShortcutsMapIterator;
+typedef QMap<QString,QString> ConnectionColors;
+typedef QMapIterator<QString, QString> ConnectionColorsIterator;
 
 
 class toConfigurationPrivate;
@@ -113,6 +115,9 @@ public:
     bool keywordUpper();
     void setKeywordUpper(bool v);
 
+    bool objectNamesUpper();
+    void setObjectNamesUpper(bool v);
+
     QString pluginDir();
     void setPluginDir(const QString & v);
 
@@ -179,6 +184,11 @@ public:
     bool tabbedTools();
     void setTabbedTools(bool v);
 
+    bool colorizedConnections();
+    void setColorizedConnections(bool v);
+    ConnectionColors connectionColors();
+    void setConnectionColors(const ConnectionColors & v);
+
     int objectCache();
     void setObjectCache(int v);
 
@@ -187,6 +197,9 @@ public:
 
     bool firewallMode();
     void setFirewallMode(bool v);
+
+    int connTestInterval();
+    void setConnTestInterval(int v);
 
     int maxContent();
     void setMaxContent(int v);
@@ -463,6 +476,8 @@ public:
     void setSyntaxErrorBg(QColor v);
     QColor syntaxCurrentLineMarker();
     void setSyntaxCurrentLineMarker(QColor v);
+    QColor syntaxStaticBg();
+    void setSyntaxStaticBg(QColor v);
 
     bool useMaxTextWidthMark();
     void setUseMaxTextWidthMark(bool v);
@@ -474,6 +489,10 @@ public:
     void setUseEditorShortcuts(bool v);
     EditorShortcutsMap editorShortcuts();
     void setEditorShortcuts(const EditorShortcutsMap & v);
+
+    // code editor
+    QString staticChecker();
+    void setStaticChecker(const QString & v);
 };
 
 typedef Loki::SingletonHolder<toConfiguration> toConfigurationSingle;

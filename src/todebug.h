@@ -2,39 +2,39 @@
 /* BEGIN_COMMON_COPYRIGHT_HEADER
  *
  * TOra - An Oracle Toolkit for DBA's and developers
- * 
+ *
  * Shared/mixed copyright is held throughout files in this product
- * 
+ *
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
  * Portions Copyright (C) 2004-2009 Numerous Other Contributors
- * 
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation;  only version 2 of
  * the License is valid for this program.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
- * 
+ *
  *      As a special exception, you have permission to link this program
  *      with the Oracle Client libraries and distribute executables, as long
  *      as you follow the requirements of the GNU GPL in regard to all of the
  *      software in the executable aside from Oracle client libraries.
- * 
+ *
  *      Specifically you are not permitted to link this program with the
  *      Qt/UNIX, Qt/Windows or Qt Non Commercial products of TrollTech.
  *      And you are not permitted to distribute binaries compiled against
- *      these libraries. 
- * 
+ *      these libraries.
+ *
  *      You may link this product with any GPL'd Qt library.
- * 
+ *
  * All trademarks belong to their respective owners.
  *
  * END_COMMON_COPYRIGHT_HEADER */
@@ -65,13 +65,21 @@
 #define TO_ERROR_NULLVALUE 32
 #define TO_ERROR_NULLCOLLECTION 40
 #define TO_ERROR_INDEX_TABLE 18
+#define TO_ERROR_DEFERRED 27
+#define TO_ERROR_EXCEPTION 28
+#define TO_ERROR_COMMUNICATION 29
 
-#define TO_REASON_KNL_EXIT 25
-#define TO_REASON_NO_SESSION -1
-#define TO_REASON_TIMEOUT 17
-#define TO_REASON_EXIT  15
 #define TO_REASON_WHATEVER 0
 #define TO_REASON_STARTING 2
+#define TO_REASON_BREAKPOINT 3
+#define TO_REASON_ENTER 6
+#define TO_REASON_RETURN 7
+#define TO_REASON_FINISH 8
+#define TO_REASON_LINE 9
+#define TO_REASON_EXIT  15
+#define TO_REASON_TIMEOUT 17
+#define TO_REASON_KNL_EXIT 25
+#define TO_REASON_NO_SESSION -1
 
 #define TO_NAME_CURSOR  0
 #define TO_NAME_TOPLEVEL 1
@@ -123,6 +131,13 @@ class toDebug : public toToolWidget
     // Toolbar
     void createActions(void);
 
+#ifdef DEBUG
+    // Get text version from error/return/reason code returned by DBMS_DEBUG routines
+    // Currently only used for debug information
+    // type: 1 - error, 2 - reason, 3 - continue
+    QString getErrorText(int code, int type);
+#endif
+
     QComboBox *Schema;
     QAction   *refreshAct;
     QAction   *newSheetAct;
@@ -172,15 +187,15 @@ class toDebug : public toToolWidget
     toSemaphore  StartedSemaphore;
     toThread    *TargetThread;
     QString      TargetSQL;
-    QString      TargetLog;
-    QString      TargetException;
+    QString      TargetLog; // accumulates strings (logs) of debugger actions
+    QString      TargetException; // accumulates errors (exceptions) occuring in target session
     toQList      InputData;
     toQList      OutputData;
-    int          ColumnSize;
-    bool         RunningTarget;
-    bool         DebuggerStarted;
+    bool         RunningTarget; // Indicates if target session is currently running.
+    // (as opposed to waiting with TargetSemaphore down)
+    bool         DebuggerStarted; // Indicates if target session has been initialised
     // Can be read after thread startup
-    QString      TargetID;
+    QString      TargetID; // oracle debug id of "target session"
     // End of lock stuff
     toTimer      StartTimer;
 
@@ -241,6 +256,8 @@ private slots:
     It's set to false when DBMS_DEBUG related calls fail.
     */
     void enableDebugger(bool);
+    void processWatches(void); // Get's values for watches during debugging
+    QString constructAnonymousBlock(toTreeWidgetItem * head, toTreeWidgetItem * last);
 
 public:
     toDebug(QWidget *parent, toConnection &connection);
@@ -254,6 +271,9 @@ public:
     toTreeWidgetItem *contents(void);
     toDebugText *currentEditor(void);
     QString currentSchema(void);
+    toQuery * debugSession; // Main oracle session for debugger. All debug related actions
+    // all calls of DBMS_DEBUG should be done from this session as
+    // this specific session has target session attached.
 
     void executeInTarget(const QString &, toQList &params);
 

@@ -2,39 +2,39 @@
 /* BEGIN_COMMON_COPYRIGHT_HEADER
  *
  * TOra - An Oracle Toolkit for DBA's and developers
- * 
+ *
  * Shared/mixed copyright is held throughout files in this product
- * 
+ *
  * Portions Copyright (C) 2000-2001 Underscore AB
  * Portions Copyright (C) 2003-2005 Quest Software, Inc.
  * Portions Copyright (C) 2004-2009 Numerous Other Contributors
- * 
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation;  only version 2 of
  * the License is valid for this program.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
- * 
+ *
  *      As a special exception, you have permission to link this program
  *      with the Oracle Client libraries and distribute executables, as long
  *      as you follow the requirements of the GNU GPL in regard to all of the
  *      software in the executable aside from Oracle client libraries.
- * 
+ *
  *      Specifically you are not permitted to link this program with the
  *      Qt/UNIX, Qt/Windows or Qt Non Commercial products of TrollTech.
  *      And you are not permitted to distribute binaries compiled against
- *      these libraries. 
- * 
+ *      these libraries.
+ *
  *      You may link this product with any GPL'd Qt library.
- * 
+ *
  * All trademarks belong to their respective owners.
  *
  * END_COMMON_COPYRIGHT_HEADER */
@@ -47,343 +47,10 @@
 
 #include <qapplication.h>
 #include <qstringlist.h>
-
-#ifdef TOPARSE_DEBUG
-
-#include <stdio.h>
-
-bool toMonolithic(void)
-{
-    return false;
-}
-
-void printStatement(toSQLParse::statement &stat, int level)
-{
-    for (int i = 0;i < level;i++)
-        printf(" ");
-
-    switch (stat.Type)
-    {
-    case toSQLParse::statement::Block:
-        printf("Block:");
-        break;
-    case toSQLParse::statement::Statement:
-        printf("Statement:");
-        break;
-    case toSQLParse::statement::List:
-        printf("List:");
-        break;
-    case toSQLParse::statement::Keyword:
-        printf("Keyword:");
-        break;
-    case toSQLParse::statement::Token:
-        printf("Token:");
-        break;
-    case toSQLParse::statement::Raw:
-        printf("Raw:");
-        break;
-    }
-    printf("%s (%d)\n", (const char *)stat.String.toUtf8(), stat.Line);
-    if (!stat.Comment.isNull())
-    {
-        for (int i = 0;i < level;i++)
-            printf(" ");
-        printf("Comment:%s\n", (const char *)stat.Comment.toUtf8());
-    }
-    for (std::list<toSQLParse::statement>::iterator i = stat.subTokens().begin();
-            i != stat.subTokens().end();
-            i++)
-        printStatement(*i, level + 1);
-}
-
-int main(int argc, char **argv)
-{
-    QString res = "\n"
-                  "create table test ( col varchar(12) );\n"
-                  "insert into prova3 (prova)\n"
-                  "values ('This insert contains a ''\n"
-                  "and now it goes to new line');\n"
-                  "create or replace PROCEDURE prova1\n"
-                  "is\n"
-                  "v_tmp NUMBER(1);\n"
-                  "begin\n"
-                  "begin\n"
-                  "select 0 into v_tmp from dual;\n"
-                  "exception\n"
-                  "when 1 = 1 then\n"
-                  "    v_tmp := 'Dadum';\n"
-                  "when others then\n"
-                  "if sqlcode=0 then\n"
-                  "null;\n"
-                  "else\n"
-                  "null;\n"
-                  "end if;\n"
-                  "end;\n"
-                  "\n"
-                  "if v_tmp=0 then\n"
-                  "null;\n"
-                  "end if;\n"
-                  "end;"
-                  "comment on column prova1.prova1 is 'This comment is\n"
-                  "on more than one line';\n"
-                  "PACKAGE oasSIMActivation AS\n"
-                  " FUNCTION ParseCommand(Command VARCHAR2,inICC VARCHAR2,Param VARCHAR2) RETURN VARCHAR2;\n"
-                  "\n"
-                  " PROCEDURE InsertActions(inCommandType VARCHAR2,\n"
-                  "    Sim oasSIM%ROWTYPE,\n"
-                  "    inParam VARCHAR2);\n"
-                  "\n"
-                  " PROCEDURE InsertActions(CommandType VARCHAR2,\n"
-                  "    inICC VARCHAR2,\n"
-                  "    inParam VARCHAR2);\n"
-                  "\n"
-                  " PROCEDURE InsertActions(inCommandType VARCHAR2,\n"
-                  "    Service oasService%ROWTYPE);\n"
-                  "\n"
-                  " PROCEDURE InsertActions(CommandType VARCHAR2,\n"
-                  "    inCustomerID NUMBER,\n"
-                  "    inSubID NUMBER,\n"
-                  "    inServiceType VARCHAR2,\n"
-                  "    Param VARCHAR2);\n"
-                  "END;\n"
-                  "DECLARE\n"
-                  "grade CHAR(1);\n"
-                  "appraisal VARCHAR2(20);\n"
-                  "BEGIN\n"
-                  "CASE grade\n"
-                  "WHEN 'A' THEN 'Excellent'\n"
-                  "WHEN 'B' THEN 'Very Good'\n"
-                  "WHEN 'C' THEN 'Good'\n"
-                  "WHEN 'D' THEN 'Fair'\n"
-                  "WHEN 'F' THEN 'Poor'\n"
-                  "ELSE 'No such grade'\n"
-                  "END;\n"
-                  "IF appraisal IS NULL THEN\n"
-                  "NULL;\n"
-                  "END IF;\n"
-                  "END;\n"
-                  "\n"
-                  "BEGIN\n"
-                  "IF 1 == 1 THEN\n"
-                  "NULL;\n"
-                  "END IF;\n"
-                  "IF appraisal IS NULL THEN\n"
-                  "NULL;\n"
-                  "ELSE\n"
-                  "SELECT CASE WHEN dummy='X' THEN 'A' ELSE 'B' END,  2 FROM dual;\n"
-                  "END IF;\n"
-                  "END;\n"
-                  "\n"
-                  "select count(case when dummy = 'Y' then dummy\n"
-                  "             else null end) as tot_str\n"
-                  "from dual;\n"
-                  "\n"
-                  "SET TRANSACTION READ ONLY\n"
-                  "\n"
-                  "PROMPT Hello\n"
-                  "\n"
-                  "/* Test comment\n"
-                  "*/\n"
-                  "INSERT INTO cdrProcess(ProcessID,\n"
-                  "         StartDate,\n"
-                  "         EnvDate,\n"
-                  "         ProgramID,\n"
-                  "         OSUser,\n"
-                  "         SystemUser,\n"
-                  "         ExecName,\n"
-                  "         ExecVersion,\n"
-                  "         ExecParameters,\n"
-                  "         HostName)\n"
-                  "VALUES (:1,\n"
-                  " SYSDATE,\n"
-                  " SYSDATE,\n"
-                  " :2,\n"
-                  " :3,\n"
-                  " :4,\n"
-                  " :5,\n"
-                  " :6,\n"
-                  " :7,\n"
-                  " :8);\n"
-                  "\n"
-                  "CREATE or REPLACE Procedure TEST_SPR\n"
-                  "(\n"
-                  "    IN_TICKET_NUM   IN  VARCHAR2\n"
-                  ")\n"
-                  "IS\n"
-                  "\n"
-                  "BEGIN\n"
-                  "\n"
-                  "BEGIN\n"
-                  "\n"
-                  "for cur_rec in (select emp_id from employees) loop\n"
-                  "\n"
-                  " update employees set emp_id = emp_id + 1\n"
-                  " where emp_id = cur_rec.emp_id;\n"
-                  " commit;\n"
-                  "end loop;\n"
-                  " \n"
-                  "END;\n"
-                  "END TEST_SPR;\n"
-                  "\n"
-                  "SELECT owner,\n"
-                  "       OBJECT,\n"
-                  "       TYPE FROM v$access\n"
-                  " WHERE sid=:f1<char[101]>\n"
-                  " ORDER BY owner,\n"
-                  "   OBJECT,\n"
-                  "   TYPE;\n"
-                  "\n"
-                  "CREATE TABLE ess.EssCalLog (\n"
-                  "        CalID  CHAR(5) NOT NULL,  -- Calender type\n"
-                  " SeqID  NUMBER(8) NOT NULL,\n"
-                  " ActStt  CHAR(1) NOT NULL\n"
-                  "  CONSTRAINT EssCalLog_CK_ActStt CHECK (ActStt IN ('A','D') ),\n"
-                  " LogRun  CHAR(1) NOT NULL  -- Should runs of this type be logged\n"
-                  "  CONSTRAINT EssCalLog_CK_LogRun CHECK (LogRun IN ('Y','N') ),\n"
-                  " PrcID  NUMBER(8) NOT NULL\n"
-                  "  CONSTRAINT EssCalDay_FK_PrcID REFERENCES ess.EssPrc(PrcID),\n"
-                  " Dsc  VARCHAR2(4000) NOT NULL, -- Description of this type\n"
-                  " CONSTRAINT EssCal_PK PRIMARY KEY (CalID,SeqID)\n"
-                  "  USING INDEX TABLESPACE Index02 -- A Comment\n"
-                  ");\n"
-                  "-- Another comment\n"
-                  "\n"
-                  "CREATE OR REPLACE procedure spTuxGetAccData (oRet                        OUT  NUMBER,\n"
-                  "          oNumSwt                     OUT  NUMBER)\n"
-                  "IS\n"
-                  "  vYear  CHAR(4);\n"
-                  "BEGIN\n"
-                  "    <<label>>\n"
-                  "    DECLARE\n"
-                  "      oTrdStt NUMBER;\n"
-                  "    BEGIN\n"
-                  "      oTrdStt := 0;\n"
-                  "    END;\n"
-                  "\n"
-                  "    EXCEPTION\n"
-                  "        WHEN VALUE_ERROR THEN\n"
-                  "     oRet := 3;\n"
-                  " WHEN NO_DATA_FOUND THEN\n"
-                  "     oRet := 2;\n"
-                  " WHEN OTHERS THEN\n"
-                  "     oRet := 1;\n"
-                  "END;\n"
-                  "CREATE OR REPLACE procedure spTuxGetAccData as\n"
-                  "  vYear  CHAR(4);\n"
-                  "begin\n"
-                  "  null;\n"
-                  "end;\n"
-                  "-------------------------------------------------------------------\n"
-                  "--    EssCal, Current calendar view\n"
-                  "\n"
-                  "CREATE VIEW ess.EssCal AS\n"
-                  "        SELECT CalID,\n"
-                  "        LogRun,\n"
-                  "        PrcID,\n"
-                  "        Dsc\n"
-                  "   FROM ess.EssCalLog a\n"
-                  "  WHERE SeqID = (SELECT MAX(aa.SeqID) FROM EssCalLog aa WHERE aa.CalID = a.CalID)\n"
-                  "    AND ActStt = 'A';\n"
-                  "\n"
-                  "    /* A little comment\n"
-                  "     */\n"
-                  "    SELECT /*+\n"
-                  "FULL(a)\n"
-                  "*/ a.TskCod TskCod -- Test comment\n"
-                  "      ,a.CreEdt CreEdt,\n"
-                  "       a.TspActOprID /* One comment OprID */ , -- Another comment\n"
-                  "       COUNT(1) Tot,\n"
-                  "       COUNT(a.TspActOprID) Lft,\n"
-                  "       b.TraCod TraCod,\n"
-                  "       SUM(b.FinAmt) FinAmt,\n"
-                  "       TraCod\n"
-                  "  FROM EssTsk a,EssTra b\n"
-                  " WHERE ((a.TspActOprID = 'Test') OR a.TspActOprID IS NULL)\n"
-                  "   AND DECODE(a.TspActOprID,NULL,NULL,a.TskID) = b.TskID(+)\n"
-                  " GROUP BY a.TskCod,a.CreEdt,a.TspActOprID,b.TraCod\n"
-                  "HAVING COUNT(a.TspActOprID) > 0;\n"
-                  "SELECT a.Sid \"-Id\",\n"
-                  "       a.Serial# \"-Serial#\",\n"
-                  "       a.SchemaName \"Schema\",\n"
-                  "       a.Status \"Status\",\n"
-                  "       a.Server \"Server\",\n"
-                  "       a.OsUser \"Osuser\",\n"
-                  "       a.Machine \"Machine\",\n"
-                  "       a.Program \"Program\",\n"
-                  "       a.Type \"Type\",\n"
-                  "       a.Module \"Module\",\n"
-                  "       a.Action \"Action\",\n"
-                  "       a.Client_Info \"Client Info\",\n"
-                  "       b.Block_Gets \"-Block Gets\",\n"
-                  "       b.Consistent_Gets \"-Consistent Gets\",\n"
-                  "       b.Physical_Reads \"-Physical Reads\",\n"
-                  "       b.Block_Changes \"-Block Changes\",\n"
-                  "       b.Consistent_Changes \"-Consistent Changes\",\n"
-                  "       c.Value*10 \"-CPU (ms)\",\n"
-                  "       a.Process \"-Process\",\n"
-                  "       a.SQL_Address||':'||SQL_Hash_Value \" SQL Address\",\n"
-                  "       a.Prev_SQL_Addr||':'||Prev_Hash_Value \" Prev SQl Address\"\n"
-                  "  FROM v$session a,\n"
-                  "       v$sess_io b,\n"
-                  "       v$sesstat c\n"
-                  " WHERE a.sid = b.sid(+)\n"
-                  "   AND a.sid = c.sid(+) AND (c.statistic# = 12 OR c.statistic# IS NULL)\n"
-                  " ORDER BY a.Sid;\n"
-                  "select a.TskCod TskCod,\n"
-                  "       count(1) Tot\n"
-                  "  from (select * from EssTsk where PrsID >= '1940') ,EssTra b\n"
-                  " where decode(a.TspActOprID,NULL,NULL,a.PrsID)+5 = b.PrsID(+)\n"
-                  " group by a.TskCod,a.CreEdt,a.TspActOprID,b.TraCod\n"
-                  "having count(a.TspActOprID) > 0;\n"
-                  "\n"
-                  "CREATE OR REPLACE procedure spTuxGetAccData (oRet OUT  NUMBER)\n"
-                  "AS\n"
-                  "  vYear  CHAR(4);\n"
-                  "BEGIN\n"
-                  "    DECLARE\n"
-                  "      oTrdStt NUMBER;\n"
-                  "    BEGIN\n"
-                  "      oTrdStt := 0;\n"
-                  "    END;\n"
-                  "    EXCEPTION\n"
-                  "        WHEN VALUE_ERROR THEN\n"
-                  "     oRet := 3;\n"
-                  "END;"
-                  ;
-
-    QApplication test(argc, argv);
-    toMarkedText text(NULL);
-    text.setText(res);
-
-    {
-        toSQLParse::editorTokenizer tokens(&text);
-
-        std::list<toSQLParse::statement> stat = toSQLParse::parse(tokens);
-
-        for (std::list<toSQLParse::statement>::iterator i = stat.begin();i != stat.end();i++)
-        {
-            printStatement(*i, 1);
-        }
-    }
-
-    QString firstparse = toSQLParse::indent(res);
-    QString secondparse = toSQLParse::indent(firstparse);
-
-    printf("First\n\n%s\n", (const char *)firstparse.toUtf8());
-
-    if (firstparse != secondparse)
-    {
-        printf("Reparse doesn't match\n");
-        printf("Second\n\n%s\n", (const char *)secondparse.toUtf8());
-    }
-
-    return 0;
-}
-
-#endif
+#include <QDebug>
 
 toSQLParse::statement::statement(type ntype, const QString &token, int cline)
-        : Type(ntype), String(token), Line(cline)
+    : Type(ntype), String(token), Line(cline)
 {
     SubTokens = NULL;
 }
@@ -406,6 +73,7 @@ toSQLParse::statement::statement(const statement &stat)
     String = stat.String;
     Comment = stat.Comment;
     Line = stat.Line;
+    StatementClass = stat.StatementClass;
     if (stat.SubTokens)
     {
         SubTokens = new std::list<statement>;
@@ -421,6 +89,7 @@ const toSQLParse::statement &toSQLParse::statement::operator = (const statement 
     String = stat.String;
     Comment = stat.Comment;
     Line = stat.Line;
+    StatementClass = stat.StatementClass;
     delete SubTokens;
     if (stat.SubTokens)
     {
@@ -451,22 +120,23 @@ bool toSQLParse::statement::operator == (const statement &stat) const
 }
 
 static const char *Operators[] =
-    {":=",
-     "=>",
-     "||",
-     "**",
-     "<<",
-     ">>",
-     "..",
-     "<>",
-     "::",
-     "!=",
-     "~=",
-     "^=",
-     "<=",
-     ">=",
-     NULL
-    };
+{
+    ":=",
+    "=>",
+    "||",
+    "**",
+    "<<",
+    ">>",
+    "..",
+    "<>",
+    "::",
+    "!=",
+    "~=",
+    "^=",
+    "<=",
+    ">=",
+    NULL
+};
 
 QString toSQLParse::stringTokenizer::getToken(bool forward, bool comments)
 {
@@ -503,11 +173,25 @@ QString toSQLParse::stringTokenizer::getToken(bool forward, bool comments)
             nc = '\n';
         if (state == space)
         {
+            // This condition finds '/' used in sqlplus to mark end of statement
+            // Note that when called from editorTokenizer it scans one string at a time (no \n's)
+            // when called from stringTokenizer full statement is passes including \n chars
+            if (Offset == 0 && c == '/' && nc != '*')
+            {
+                Offset++;
+                return "~~~";
+            }
+            else if (c == '\n' && nc == '/' && String[Offset + inc + inc] != '*')
+            {
+                Offset += 2;
+                return "~~~";
+            }
+
             if (forward && c == '-' && nc == '-')
             {
                 int spos = Offset;
                 if (forward)
-                    for (Offset++;Offset < int(String.length()) && String[Offset] != '\n';Offset++)
+                    for (Offset++; Offset < int(String.length()) && String[Offset] != '\n'; Offset++)
                         ;
                 if (comments)
                     return String.mid(spos, Offset - spos);
@@ -595,7 +279,7 @@ QString toSQLParse::stringTokenizer::getToken(bool forward, bool comments)
                 }
                 else
                 {
-                    for (int i = 0;Operators[i];i++)
+                    for (int i = 0; Operators[i]; i++)
                     {
                         if ((forward && c == Operators[i][0] && nc == Operators[i][1]) ||
                                 (!forward && nc == Operators[i][0] && c == Operators[i][1]))
@@ -672,7 +356,7 @@ QString toSQLParse::stringTokenizer::remaining(bool eol)
 }
 
 toSQLParse::editorTokenizer::editorTokenizer(toMarkedText *editor, int offset, int line)
-        : tokenizer(offset, line)
+    : tokenizer(offset, line)
 {
     Editor = editor;
     toHighlightedText *text = dynamic_cast<toHighlightedText *>(editor);
@@ -785,7 +469,7 @@ QString toSQLParse::editorTokenizer::remaining(bool eol)
     {
         QStringList rows;
         rows << Editor->text(Line).mid(Offset);
-        for (int i = Line;i < Editor->lines();i++)
+        for (int i = Line; i < Editor->lines(); i++)
             rows << Editor->text(i);
         Line = Editor->lines();
         Offset = 0;
@@ -800,13 +484,16 @@ QString toSQLParse::editorTokenizer::remaining(bool eol)
     }
 }
 
+// Parameters:
+//   lst - indicates that parsing is done in a list (inside parenthesis)
 toSQLParse::statement toSQLParse::parseStatement(tokenizer &tokens, bool declare, bool lst)
 {
     statement ret(statement::Statement);
+    ret.StatementClass = statement::ddldml; // by default statement is not plsqlblock
 
     toSyntaxAnalyzer &syntax = tokens.analyzer();
 
-    QString first;
+    QString first; // first token in statement being parsed
     QString realfirst;
     bool nokey = false;
     bool block = false;
@@ -815,10 +502,6 @@ toSQLParse::statement toSQLParse::parseStatement(tokenizer &tokens, bool declare
             token = tokens.getToken(true, true))
     {
         QString upp = token.toUpper();
-#ifdef TOPARSE_DEBUG
-
-        printf("%s (%d)\n", (const char*)token.toUtf8(), tokens.line());
-#endif
 
         if (first.isNull() && !token.startsWith(("/*")) && !token.startsWith("--") && !token.startsWith("//"))
             realfirst = first = upp;
@@ -826,12 +509,21 @@ toSQLParse::statement toSQLParse::parseStatement(tokenizer &tokens, bool declare
         if (upp == ("PROCEDURE") ||
                 upp == ("FUNCTION") ||
                 upp == ("PACKAGE"))
+        {
             block = true;
+            ret.StatementClass = statement::plsqlblock;
+        }
+        else if (upp == "DECLARE" ||
+                 upp == "BEGIN")
+        {
+            ret.StatementClass = statement::plsqlblock;
+        }
 
         if (upp == ("SELF"))
             block = false;
 
         if (first != ("END") && ((first == ("IF") && upp == ("THEN")) ||
+                                 (first == ("CASE") && upp == ("THEN") && !lst) ||
                                  upp == ("LOOP") ||
                                  upp == ("DO") ||
                                  (syntax.declareBlock() && upp == ("DECLARE")) ||
@@ -843,6 +535,7 @@ toSQLParse::statement toSQLParse::parseStatement(tokenizer &tokens, bool declare
             statement blk(statement::Block);
             ret.subTokens().insert(ret.subTokens().end(), statement(statement::Keyword, token, tokens.line()));
             blk.subTokens().insert(blk.subTokens().end(), ret);
+            blk.StatementClass = ret.StatementClass;
             statement cur(statement::Statement);
             bool dcl = (upp == ("DECLARE") || upp == ("IS") || upp == ("AS"));
             do
@@ -881,7 +574,7 @@ toSQLParse::statement toSQLParse::parseStatement(tokenizer &tokens, bool declare
             ret.subTokens().insert(ret.subTokens().end(), statement(statement::Keyword, token, tokens.line()));
             int line = tokens.line();
             int offset = tokens.offset();
-            for (QString tmp = tokens.getToken(true, true);line == tokens.line();tmp = tokens.getToken(true, true))
+            for (QString tmp = tokens.getToken(true, true); line == tokens.line(); tmp = tokens.getToken(true, true))
                 ret.subTokens().insert(ret.subTokens().end(), statement(statement::Token, tmp, line));
             tokens.setLine(line);
             tokens.setOffset(offset);
@@ -890,17 +583,17 @@ toSQLParse::statement toSQLParse::parseStatement(tokenizer &tokens, bool declare
         }
         else if (upp == (",") ||
                  ((syntax.reservedWord(upp) &&
-                  upp != ("NOT") &&
-                  upp != ("IS") &&
-                  upp != ("LIKE") &&
-                  upp != ("IN") &&
-                  upp != ("ELSE") &&
-                  upp != ("ELSIF") &&
-                  upp != ("END") &&
-                  upp != ("BETWEEN") &&
-                  upp != ("ASC") &&
-                  upp != ("DESC") &&
-                  upp != ("NULL")) && !nokey))
+                   upp != ("NOT") &&
+                   upp != ("IS") &&
+                   upp != ("LIKE") &&
+                   upp != ("IN") &&
+                   upp != ("ELSE") &&
+                   upp != ("ELSIF") &&
+                   upp != ("END") &&
+                   upp != ("BETWEEN") &&
+                   upp != ("ASC") &&
+                   upp != ("DESC") &&
+                   upp != ("NULL")) && !nokey))
         {
             ret.subTokens().insert(ret.subTokens().end(), statement(statement::Keyword, token, tokens.line()));
             nokey = false;
@@ -909,18 +602,20 @@ toSQLParse::statement toSQLParse::parseStatement(tokenizer &tokens, bool declare
         {
             ret.subTokens().insert(ret.subTokens().end(), statement(statement::Token, token, tokens.line()));
             statement lst = parseStatement(tokens, false, true);
-            statement t = toPop(lst.subTokens());
+            statement t = toPop(lst.subTokens()); // Pop the last value out of a list
             if (lst.Type != statement::List)
                 toStatusMessage(qApp->translate("toSQLparse", "Unbalanced parenthesis (Too many '(')"));
             nokey = false;
             if (first == ("CREATE") && !block)
             {
+                // save statement as type "Block"
                 statement end = parseStatement(tokens, false, true);
                 statement blk(statement::Block);
                 blk.subTokens().insert(blk.subTokens().end(), ret);
                 blk.subTokens().insert(blk.subTokens().end(), lst);
                 end.subTokens().insert(end.subTokens().begin(), t);
                 blk.subTokens().insert(blk.subTokens().end(), end);
+                blk.StatementClass = ret.StatementClass;
                 return blk;
             }
             else
@@ -934,6 +629,19 @@ toSQLParse::statement toSQLParse::parseStatement(tokenizer &tokens, bool declare
             ret.Type = statement::List;
             ret.subTokens().insert(ret.subTokens().end(), statement(statement::Token, token, tokens.line()));
             return ret;
+        }
+        else if (upp == ("~~~"))
+        {
+            if  (first == ("~~~"))
+            {
+                // empty statement (sql+ would repeat the last statement)
+            }
+            else if (first == ("INSERT") || first == ("UPDATE") || first == ("DELETE") || first == ("MERGE"))
+            {
+                // return without inserting token "/"
+                ret.subTokens().insert(ret.subTokens().end(), statement(statement::EndOfStatement, "/", tokens.line()));
+                return ret;
+            }
         }
         else if (upp == (";"))
         {
@@ -1025,14 +733,14 @@ int toSQLParse::countIndent(const QString &txt, int &chars)
 }
 
 toSQLParse::settings toSQLParse::Settings = {true,
-        false,
-        false,
-        false,
-        true,
-        true,
-        true,
-        4,
-        60
+                                 false,
+                                 false,
+                                 false,
+                                 true,
+                                 true,
+                                 true,
+                                 4,
+                                 60
                                             };
 
 QString toSQLParse::indentString(int level)
@@ -1040,13 +748,13 @@ QString toSQLParse::indentString(int level)
     QString ret;
     if (!Settings.ExpandSpaces)
     {
-        for (int i = 0;i < level / Settings.IndentLevel;i++)
+        for (int i = 0; i < level / Settings.IndentLevel; i++)
             ret += ("\t");
-        for (int j = 0;j < level % Settings.IndentLevel;j++)
+        for (int j = 0; j < level % Settings.IndentLevel; j++)
             ret += (" ");
     }
     else
-        for (int j = 0;j < level;j++)
+        for (int j = 0; j < level; j++)
             ret += (" ");
     return ret;
 }
@@ -1086,7 +794,7 @@ static QString IndentComment(int level, int current, const QString &comment, boo
             ret += ("\n");
             current = 0;
         }
-        for (int i = 0;i < comment.length();i++)
+        for (int i = 0; i < comment.length(); i++)
         {
             if (!nl || !comment.at(i).isSpace())
             {
@@ -1150,7 +858,7 @@ QString toSQLParse::indentStatement(statement &stat, toConnection &conn, int lev
 
 QString toSQLParse::indentStatement(statement &stat, int level, toSyntaxAnalyzer &syntax)
 {
-    QString ret;
+    QString ret; // indented (formatted) given statement
 
     switch (stat.Type)
     {
@@ -1164,24 +872,20 @@ QString toSQLParse::indentStatement(statement &stat, int level, toSyntaxAnalyzer
                 i != stat.subTokens().end();
                 i++)
         {
-            int add
-            = 0;
+            int add = 0;
             std::list<toSQLParse::statement>::iterator j = i;
             j++;
             if (i != stat.subTokens().begin() &&
                     j != stat.subTokens().end())
-                add
-                = Settings.IndentLevel;
+                add = Settings.IndentLevel;
             else
                 exc = 0;
 
             QString t;
-            if ((*i).subTokens().begin() != (*i).subTokens().
-                    end())
+            if ((*i).subTokens().begin() != (*i).subTokens().end())
                 t = (*(*i).subTokens().begin()).String.toUpper();
             if (t == ("BEGIN") || t == ("WHEN") || t == ("ELSE") || t == ("ELSIF"))
-                add
-                = 0;
+                add = 0;
             if ((*i).Type == statement::List)
                 ret += indentString(level + add
                                     + exc);
@@ -1190,7 +894,7 @@ QString toSQLParse::indentStatement(statement &stat, int level, toSyntaxAnalyzer
             if ((*i).Type == statement::List)
             {
                 int i;
-                for (i = ret.length() - 1;i >= 0 && ret[i].isSpace();i--)
+                for (i = ret.length() - 1; i >= 0 && ret[i].isSpace(); i--)
                     ;
                 ret = ret.mid(0, std::max(i + 1, 0));
                 ret += ("\n");
@@ -1301,6 +1005,10 @@ QString toSQLParse::indentStatement(statement &stat, int level, toSyntaxAnalyzer
                     current += CurrentColumn(t);
                 ret += t;
                 any = true;
+            }
+            else if ((*i).Type == statement::EndOfStatement)
+            {
+                ret += "\n/";
             }
             else if ((*i).String == ("::"))
             {
@@ -1437,11 +1145,11 @@ QString toSQLParse::indentStatement(statement &stat, int level, toSyntaxAnalyzer
                                                          ret.at(ret.length() - 1) == '\''))))
                     {
                         if (t != (";") &&
-                            t != (".") &&
-                            t != "@" &&
-                            ret.at(ret.length() - 1) != '.' &&
-                            ret.at(ret.length() - 1) != '@' &&
-                            current != 0)
+                                t != (".") &&
+                                t != "@" &&
+                                ret.at(ret.length() - 1) != '.' &&
+                                ret.at(ret.length() - 1) != '@' &&
+                                current != 0)
                         {
                             current++;
                             ret += (" ");
