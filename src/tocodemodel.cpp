@@ -77,7 +77,36 @@ static toSQL SQLListObjects("toCodeModel:ListObjects",
                              "                          'TYPE' )\n"
                              "       AND a.owner = :owner<char[50]>\n"
                              "ORDER BY a.object_name\n",
-                            "Get list of code objects");
+                             "Get list of code objects",
+                             "0901",
+                             "Oracle");
+
+static toSQL SQLListObjects8("toCodeModel:ListObjects",
+                             "SELECT a.object_name,\n"
+                             "       a.object_type,\n"
+                             "       DECODE (a.object_type,\n"
+                             "         'PACKAGE', (SELECT DECODE (ao.status,\n"
+                             "           'VALID', (SELECT ao2.status \n"
+                             "                       FROM sys.all_objects ao2\n"
+                             "                      WHERE ao2.object_name = a.object_name\n"
+                             "                        AND ao2.owner = a.owner \n"
+                             "                        AND ao2.object_type='PACKAGE BODY'),\n"
+                             "           ao.status )\n"
+                             " FROM sys.all_objects ao\n"
+                             " WHERE ao.object_name = a.object_name\n"
+                             " AND ao.owner = a.owner AND ao.object_type=a.object_type ),\n"
+                             " a.status ) AS Status\n"
+                             "  FROM sys.all_objects a\n"
+                             "  WHERE\n"
+                             "       a.object_type IN ( 'FUNCTION',\n"
+                             "                          'PACKAGE',\n"
+                             "                          'PROCEDURE',\n"
+                             "                          'TYPE' )\n"
+                             "       AND a.owner = :owner<char[50]>\n"
+                             "ORDER BY a.object_name\n",
+                             "",
+                             "0801",
+                             "Oracle");
 
 static toSQL SQLListObjectsPgSQL("toCodeModel:ListObjects",
                              "SELECT p.proname AS Object_Name,\n"
@@ -91,6 +120,16 @@ static toSQL SQLListObjectsPgSQL("toCodeModel:ListObjects",
                              "",
                              "7.1",
                              "PostgreSQL");
+
+static toSQL SQLListObjectsMySQL("toCodeModel:ListObjects",
+                                 "select r.routine_name object_name,\n"
+                                 "       r.routine_type objec_type,\n"
+                                 "       'VALID' status\n"
+                                 "  from information_schema.routines r\n"
+                                 " where r.routine_schema = :owner<char[50]>\n",
+                                 "",
+                                 "5.0",
+                                 "MySQL");
 
 static toSQL SQLListPackage("toCodeModel:ListPackage",
                             "SELECT \n"
@@ -357,12 +396,18 @@ void toCodeModel::refresh(toConnection &conn, const QString &owner)
 {
     m_owner = owner;
 
+    // Create an empty code object tree displayed on the right hand-side
+    // Individual items are fetched later using SQLListObjects query
+    // Note: MySQL does not support packages and types therefore these
+    // branches are not included for MySQL connections.
     delete rootItem;
     rootItem    = new toCodeModelItem(0, "Code");
-    packageItem = new toCodeModelItem(rootItem, tr("Package"));
+    if (!toIsMySQL(conn))
+        packageItem = new toCodeModelItem(rootItem, tr("Package"));
     procItem    = new toCodeModelItem(rootItem, tr("Procedure"));
     funcItem    = new toCodeModelItem(rootItem, tr("Function"));
-    typeItem    = new toCodeModelItem(rootItem, tr("Type"));
+    if (!toIsMySQL(conn))
+        typeItem    = new toCodeModelItem(rootItem, tr("Type"));
 
     toQList param;
     param.push_back(m_owner);

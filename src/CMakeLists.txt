@@ -87,6 +87,7 @@ SET(TORA_MOC_CLASSES
     toabout.h
     toalert.h
     toanalyze.h
+    toawr.h
 #     tobackground.h
 #     tobackgroundlabel.h
     tobackup.h
@@ -109,6 +110,7 @@ SET(TORA_MOC_CLASSES
     tobrowsercodewidget.h
     tobrowsertriggerwidget.h
     tobrowserdblinkswidget.h
+    tobrowserdirectorieswidget.h
 #     tobrowserschemabasewidget.h
 #     toconf.h
 #     toconfiguration.h
@@ -260,6 +262,7 @@ SET(TORA_SOURCES
     toabout.cpp
     toalert.cpp
     toanalyze.cpp
+    toawr.cpp
     tobackground.cpp
     tobackgroundlabel.cpp
     tobackup.cpp
@@ -281,6 +284,7 @@ SET(TORA_SOURCES
     tobrowsercodewidget.cpp
     tobrowsertriggerwidget.cpp
     tobrowserdblinkswidget.cpp
+    tobrowserdirectorieswidget.cpp
 #     tobrowserschemabasewidget.cpp
     toconfiguration.cpp
     toconnection.cpp
@@ -438,6 +442,11 @@ IF (DB2_FOUND)
                               db2/db2query.cpp)
     #db2/qsql_db2.cpp)
 ENDIF (DB2_FOUND)
+
+IF (TERADATA_FOUND)
+    LIST (APPEND TORA_SOURCES toteradataconnection.cpp)
+ENDIF (TERADATA_FOUND)
+
 # compiled in icons for windows
 IF (WIN32 AND MSVC)
     SET (TORA_SOURCES ${TORA_SOURCES} tora.rc)
@@ -500,6 +509,10 @@ IF (DB2_INCLUDES)
     INCLUDE_DIRECTORIES( ${DB2_INCLUDES} )
 ENDIF (DB2_INCLUDES)
 
+IF (TERADATA_PATH_INCLUDES)
+    INCLUDE_DIRECTORIES( ${TERADATA_PATH_INCLUDES} )
+ENDIF (TERADATA_PATH_INCLUDES)
+
 IF (WANT_INTERNAL_QSCINTILLA)
     INCLUDE_DIRECTORIES(
         ${CMAKE_SOURCE_DIR}/src/qscintilla2/Qt4
@@ -524,11 +537,11 @@ IF(WIN32)
         # WinMain wrapper from QT_QTMAIN_LIBRARY is used and liner must be modified
         LINK_LIBRARIES(${QT_QTMAIN_LIBRARY})
         SET (GUI_TYPE WIN32)
-        IF (WANT_DEBUG)
-                SET (CMAKE_EXE_LINKER_FLAGS "/NODEFAULTLIB:msvcrtd.lib ${CMAKE_EXE_LINKER_FLAGS}")
-        ELSE (WANT_DEBUG)
-            SET (CMAKE_EXE_LINKER_FLAGS "/NODEFAULTLIB:msvcrt.lib ${CMAKE_EXE_LINKER_FLAGS}")
-        ENDIF (WANT_DEBUG)
+#        IF (WANT_DEBUG)
+#                SET (CMAKE_EXE_LINKER_FLAGS "/NODEFAULTLIB:msvcrtd.lib ${CMAKE_EXE_LINKER_FLAGS}")
+#        ELSE (WANT_DEBUG)
+#            SET (CMAKE_EXE_LINKER_FLAGS "/NODEFAULTLIB:msvcrt.lib ${CMAKE_EXE_LINKER_FLAGS}")
+#        ENDIF (WANT_DEBUG)
     ENDIF (MSVC)
 ENDIF(WIN32)
 
@@ -567,6 +580,10 @@ IF (DB2_LIBRARIES)
    TARGET_LINK_LIBRARIES (${EXE_NAME} ${DB2_LIBRARIES})
 ENDIF (DB2_LIBRARIES)
 
+IF (TERADATA_LIBRARIES)
+   TARGET_LINK_LIBRARIES (${EXE_NAME} ${TERADATA_LIBRARIES})
+ENDIF (TERADATA_LIBRARIES)
+
 IF (USE_TROTL)
   SET_TARGET_PROPERTIES(${EXE_NAME} PROPERTIES COMPILE_FLAGS "-DTROTL_DLL")
   TARGET_LINK_LIBRARIES (${EXE_NAME} ${TROTL_LIB})
@@ -580,6 +597,7 @@ ENDIF (WANT_INTERNAL_QSCINTILLA)
 # prevent opening the cmd.exe window
 IF (WIN32)
     TARGET_LINK_LIBRARIES(${EXE_NAME} ${WINDOWS_LIB})
+    TARGET_LINK_LIBRARIES(${EXE_NAME} "ws2_32.lib")
     # don't use console subsystem
     IF (MINGW)
         TARGET_LINK_LIBRARIES(${EXE_NAME} "-mwindows")

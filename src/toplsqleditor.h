@@ -75,6 +75,7 @@ class toPLSQLEditor : public toToolWidget
 
     QComboBox *Schema;
     QAction   *refreshAct;
+    QAction   *describeAct;
     QAction   *newSheetAct;
     QAction   *compileAct;
     QAction   *compileWarnAct;
@@ -138,8 +139,11 @@ public slots:
     void newSheet(void);
     void windowActivated(QMdiSubWindow *w);
     void closeEditor(void);
+    void closeEditor(int);
     void closeAllEditor(void);
     void checkCode(void);
+private slots:
+    void describe(void);
 };
 
 #endif

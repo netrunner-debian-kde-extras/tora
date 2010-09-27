@@ -44,7 +44,6 @@
 
 #include "config.h"
 #include "tobackground.h"
-#include "tobackuptool.h"
 
 #include "tomainwindow.h"
 
@@ -55,6 +54,7 @@
 #include <qtimer.h>
 
 #include <QLabel>
+#include <QMdiSubWindow>
 #include <QPointer>
 
 #define TOMessageBox QMessageBox
@@ -66,7 +66,6 @@ class toTreeWidgetItem;
 class QToolBar;
 class QToolButton;
 class QMdiArea;
-class QMdiSubWindow;
 class toBackgroundLabel;
 class toConnection;
 class toEditWidget;
@@ -89,7 +88,6 @@ class toMain : public toMainWindow
     Q_OBJECT;
 
 private:
-    std::auto_ptr<toBackupTool> toBackupTool_;
     /**
      * The connections that have been opened in TOra.
      */
@@ -365,7 +363,7 @@ public:
      * @exception QString If connection wasn't found.
      */
     toConnection &connection(const QString &);
-    /** Set if a connection needs to be commited. Also updates visual feedback in interface.
+    /** Set if a connection needs to be committed. Also updates visual feedback in interface.
      */
     void setNeedCommit(toConnection &conn, bool needCommit = true);
 
@@ -510,7 +508,7 @@ signals:
      */
     void removedToolWidget(toToolWidget *tool);
     /** Emitted before a commit or rollback is made to the current connection.
-     * @param conn Connection that is commited
+     * @param conn Connection that is committed
      * @param cmt True if commit, false if rollback.
      */
     void willCommit(toConnection &conn, bool cmt);
@@ -652,6 +650,8 @@ private slots:
      *
      */
     void showMessageImpl(const QString &str, bool save, bool log);
+
+    void workspaceCloseWindow(int);
 };
 
 /** Get a pointer to the main window

@@ -101,6 +101,10 @@
 #include "icons/toworksheet.xpm"
 
 #ifdef DEBUG
+// Performs standard Oracle debugger selfcheck:
+// debug package existance, version, pipe health etc.
+// This is required in order not to debug debugger when
+// the problem is in Oracle database itself.
 static toSQL SQLDebugSelfCheck("toDebug:SelfCheck",
                                "DECLARE\n"
                                "  error_message VARCHAR2(1000);\n"
@@ -113,6 +117,7 @@ static toSQL SQLDebugSelfCheck("toDebug:SelfCheck",
                                "END;",
                                "Perform Self-check of debugging system");
 #endif
+
 class toDebugTool : public toTool
 {
     std::map<toConnection *, QWidget *> Windows;
@@ -139,9 +144,9 @@ public:
         qDebug() << "DBMS_DEBUG.SELF_CHECK result: " << str;
 #endif
 
-        // Only one Debug Tool window is allowed per connection
-        // Therefor is Debug Tool is being launched for a connection with an already
-        // opened Debug window - that window is activated instead of opening a new one
+        // Only one Debug Tool window is allowed per connection.
+        // Therefore if Debug Tool is being launched for a connection with an already
+        // opened Debug window - that window is activated instead of opening a new one.
         std::map<toConnection *, QWidget *>::iterator i = Windows.find(&connection);
         if (i != Windows.end())
         {
@@ -156,6 +161,7 @@ public:
             return window;
         }
     } // toolWindow
+
     void closeWindow(toConnection &connection)
     {
         std::map<toConnection *, QWidget *>::iterator i = Windows.find(&connection);
@@ -367,18 +373,24 @@ static toSQL SQLDebugOutputEnable("toDebugOutput:Enable",
                                   "Enable output in the debug session");
 
 // Class handling output from target session
+// Note: as this one is inherited from toOutput - by default it will be refreshing
+// (calling refresh(void) every N seconds (as specified in TOra preference).
+// As this makes no sense when debugging is stopped this refresh timer has to be
+// adjusted when starting/stopping debugging.
 class toDebugOutput : public toOutput
 {
     toDebug *Debugger;
-//    toConnection * outputConnection;
-    toQuery * outputSession; // A specific debug session, the only one having target session attached.
-    // Attempts to call output functions from any other sessions will fail.
+    // A specific debug session, the only one having target session attached.
+    // Attempts to call output functions from any other session will fail.
+    toQuery * outputSession;
+
 public:
     toDebugOutput(toDebug *debug, QWidget *parent, toConnection &conn, toQuery *query)
             : toOutput(parent, conn), Debugger(debug)
     {
-        outputSession = query;      // One specific oracle session must be used.
+        outputSession = query; // One specific oracle session must be used.
     }
+
     virtual void refresh(void)
     {
         if (Debugger->isRunning() && enabled())
@@ -398,7 +410,8 @@ public:
             }
             TOCATCH
         }
-    }
+    } // refresh
+
     virtual void disable(bool dis)
     {
 #ifdef DEBUG
@@ -434,10 +447,8 @@ public:
 // Get text version from error/return/reason code returned by DBMS_DEBUG routines
 // Used for debug purposes
 // type: 1 - error, 2 - reason, 3 - continue
-QString toDebug::getErrorText(int code, int type)
+void toDebug::getErrorText(int code, int type, QString &ret)
 {
-    QString ret;
-
     if (type == 1) // error codes
     {
         switch (code)
@@ -536,13 +547,14 @@ QString toDebug::getErrorText(int code, int type)
         case TO_BREAK_NEXT_LINE:
             ret = "TO_BREAK_NEXT_LINE (32)";
             break;
+        case TO_ABORT_EXECUTION:
+            ret = "TO_ABORT_EXECUTION (8192)";
+            break;
         default:
             ret = "UNKOWN CONTINUE CODE " + code;
         }
     }
     else ret = "ERROR! Unknown type " + type;
-
-    return ret;
 } // getTextVersion
 #endif
 
@@ -565,24 +577,40 @@ static toSQL SQLDebugInit("toDebug:Initialize",
                           "BEGIN\n"
                           "  ret:=SYS.DBMS_DEBUG.INITIALIZE;\n"
                           "  SELECT ret INTO :f2<char[201],out> FROM sys.DUAL;\n"
-                          "  SYS.DBMS_DEBUG.DEBUG_ON;\n"
                           "END;",
                           "Initialize the debug session, must have same bindings");
+
+static toSQL SQLDebugOn("toDebug:DebugOn",
+                        "BEGIN\n"
+                        "  SYS.DBMS_DEBUG.DEBUG_ON;\n"
+                        "END;\n",
+                        "Switch on debugging mode");
+
+static toSQL SQLDebugOff("toDebug:DebugOff",
+                         "BEGIN\n"
+                         "  SYS.DBMS_DEBUG.DEBUG_OFF;\n"
+                         "END;\n",
+                         "Switch off debugging mode");
+
 
 // Target session running in a separate thread
 void toDebug::targetTask::run(void)
 {
 //qDebug() << "toDebug::targetTask::run";
+    bool debugModeOn = false; // is debug mode switched on in target session?
     try
     {
         // Create a target session using parameters of a current "debug" connection
-        toQuery targetSession(Parent.connection());
+        toQuery * targetSession = new toQuery(Parent.connection());
+        // give pointer of target session to main debug session so that it can cancell
+        // this query if/when user presses "stop" button
+        Parent.TargetQuery = targetSession;
         try
         {
 #ifdef DEBUG
             qDebug() << "toDebug::targetTask::run ALTER SESSION SET PLSQL_OPTIMIZE_LEVEL = 1";
 #endif
-            targetSession.execute(SQLDebugEnable);
+            targetSession->execute(SQLDebugEnable);
         }
         catch (...)
         {
@@ -593,10 +621,8 @@ void toDebug::targetTask::run(void)
         {
 #ifdef DEBUG
             qDebug() << "toDebug::targetTask::run DBMS_DEBUG.INITIALIZE";
-            qDebug() << "toDebug::targetTask::run DBMS_DEBUG.DEBUG_ON";
 #endif
-            targetSession.execute(SQLDebugInit);
-
+            targetSession->execute(SQLDebugInit);
             // can't use moc from nested class
             QMetaObject::invokeMethod(&Parent,
                                       "enableDebugger",
@@ -605,10 +631,9 @@ void toDebug::targetTask::run(void)
 
             toLocker lock (Parent.Lock);
             Parent.DebuggerStarted = true;
-            Parent.TargetID = targetSession.readValue();
-//qDebug() << "toDebug::targetTask::run target id = " << Parent.TargetID;
-            Parent.ChildSemaphore.up(); // resume main TOra thread
+            Parent.TargetID = targetSession->readValue();
             Parent.TargetLog += QString::fromLatin1("Debug session connected\n");
+            Parent.ChildSemaphore.up(); // resume main TOra thread
         }
         catch (const QString &exc)
         {
@@ -622,13 +647,16 @@ void toDebug::targetTask::run(void)
             Parent.TargetLog += exc;
             Parent.DebuggerStarted = false;
             Parent.ChildSemaphore.up(); // resume main TOra thread
-            return ;
+	    delete targetSession;
+            return;
         }
+
+        // Do not show "busy" cursor for target task as it will be running/suspended
+        // until the code is finished or until a user stops debugging
+        targetSession->setShowBusy(false);
+
         while (1) // this will loop until target thread is required (while debugger tool is running)
         {
-#ifdef DEBUG
-            qDebug() << "toDebug::targetTask::run .........starting iteration....";
-#endif
             {
                 toLocker lock (Parent.Lock);
                 Parent.RunningTarget = false;
@@ -642,12 +670,14 @@ void toDebug::targetTask::run(void)
 #endif
 
             QString sql;
+            bool debugTarget;
             toQList inParams;
             toQList outParams;
             {
                 toLocker lock (Parent.Lock);
                 Parent.RunningTarget = true;
                 sql = Parent.TargetSQL;
+                debugTarget = Parent.DebugTarget;
                 Parent.TargetSQL = "";
 #ifdef DEBUG
                 qDebug() << "toDebug::targetTask::run Target now RUNNING! Got sql to execute/debug: " << sql;
@@ -656,7 +686,8 @@ void toDebug::targetTask::run(void)
                 Parent.InputData.clear(); // To make sure data is not shared
                 Parent.OutputData.clear();
             }
-//             Parent.StartedSemaphore.up();
+
+            // Target thread is closed when empty sql is given to be executed
             if (sql.isEmpty())
                 break;
 
@@ -667,10 +698,32 @@ void toDebug::targetTask::run(void)
                 Parent.Lock.unlock();
 
                 Parent.ChildSemaphore.up(); // resume main TOra thread
+
+                // Check if debug mode has to be turned on (for debbuging code)
+                // of not (for say compilation of code in target session)
+                if (debugTarget && !debugModeOn)
+                {
+#ifdef DEBUG
+                    qDebug() << "toDebug::targetTask::run DBMS_DEBUG.DEBUG_ON";
+#endif
+                    targetSession->execute(SQLDebugOn);
+                    debugModeOn = true;
+                } else if (!debugTarget && debugModeOn)
+                {
+#ifdef DEBUG
+                    qDebug() << "toDebug::targetTask::run DBMS_DEBUG.DEBUG_OFF";
+#endif
+                    targetSession->execute(SQLDebugOff);
+                    debugModeOn = false;
+                }
+
+                // TODO: refresh timer should probably be restored to previously set
+                //       value rather than to a default one...
+                Parent.Output->changeRefresh(""); // enable output refresh timer
 #ifdef DEBUG
                 qDebug() << "toDebug::targetTask::run before execution of sql";
 #endif
-                outParams = targetSession.readQuery(sql, inParams);
+                outParams = targetSession->readQuery(sql, inParams);
 #ifdef DEBUG
                 qDebug() << "toDebug::targetTask::run after execution of sql.";
 #endif
@@ -683,7 +736,8 @@ void toDebug::targetTask::run(void)
                 Parent.Lock.lock();
                 Parent.TargetLog += QString::fromLatin1("Encountered error: ");
                 Parent.TargetLog += str;
-                if (!str.startsWith("ORA-06543:")) // PL/SQL: execution error - execution aborted
+                if (!str.startsWith("ORA-06543:") && // PL/SQL: execution error - execution aborted
+                    !str.startsWith("ORA-01013"))
                     Parent.TargetException += str;
                 Parent.TargetLog += QString::fromLatin1("\n");
                 Parent.Lock.unlock();
@@ -698,6 +752,7 @@ void toDebug::targetTask::run(void)
                 Parent.TargetException += QString::fromLatin1("Encountered unknown exception\n");
                 Parent.Lock.unlock();
             }
+            Parent.Output->changeRefresh("None"); // disable debug output refresh timer
 
             {
                 toLocker lock (Parent.Lock);
@@ -705,8 +760,30 @@ void toDebug::targetTask::run(void)
                 Parent.TargetLog += QString::fromLatin1("Execution ended\n");
             }
             Parent.ChildSemaphore.up();
-        }
+        } // while (1)
 
+        // Before closing target thread switch off debug mode in target session.
+        // It is not mandatory to call DEBUG_OFF when ending session, but in TOra
+        // that oracle session could be re-used (from connection pool) for something
+        // else therefore debug mode must be switched off.
+        if (debugModeOn)
+        {
+            try
+            {
+                qDebug() << "DBMS_DEBUG.DEBUG_OFF";
+                targetSession->execute(SQLDebugOff);
+                //targetSession->disconnect();
+            }
+            catch (...)
+            {
+                qDebug() << "We actually excpect this to fail...";
+            }
+        }
+        // TS 2010-07-10 Doesn't seem right to skipt this delete, but with it
+        // debugger hangs on subsequent restart of debugger during
+        // DBMS_DEBUG.INITIALIZE.
+	targetSession->disconnect();
+        //delete targetSession;
     }
     TOCATCH
 #ifdef DEBUG
@@ -714,10 +791,11 @@ void toDebug::targetTask::run(void)
 #endif
     toLocker lock (Parent.Lock);
     Parent.DebuggerStarted = false;
-    QMetaObject::invokeMethod(&Parent,
-                              "enableDebugger",
-                              Qt::QueuedConnection,
-                              Q_ARG(bool, false));
+    Parent.RunningTarget = false;
+//    QMetaObject::invokeMethod(&Parent,
+//                              "enableDebugger",
+//                              Qt::QueuedConnection,
+//                              Q_ARG(bool, false));
     Parent.TargetLog += QString::fromLatin1("Closing debug session\n");
     Parent.TargetThread = NULL;
     Parent.ChildSemaphore.up(); // Resume main TOra thread
@@ -1060,6 +1138,11 @@ QString toDebug::constructAnonymousBlock(toTreeWidgetItem * head, toTreeWidgetIt
 void toDebug::execute(void)
 {
 //qDebug() << "toDebug::execute";
+    if (!DebuggerStarted)
+    {
+        // Actually start target session which will be running code being debugged
+        startTarget();
+    }
     if (RunningTarget)
     {
         // If target is already running, continue to next breakpoint
@@ -1067,7 +1150,7 @@ void toDebug::execute(void)
         return ;
     }
 
-    // Check if current code has been modified in TOra and not commited to database.
+    // Check if current code has been modified in TOra and not committed to database.
     // If so - force user to compile code.
     if (!checkCompile())
         return ;
@@ -1110,13 +1193,13 @@ void toDebug::execute(void)
             else
                 delete head;
             TargetSQL = toDeepCopy(sql); // Deep copy of SQL
+            DebugTarget = true; // switch target to debug mode, we're debuggin'!
         }
 #ifdef DEBUG
         qDebug() << "toDebug::execute sql has been prepared. upping TargetSemaphore!";
 #endif
-        TargetSemaphore.up(); // Go go power rangers!
+        TargetSemaphore.up(); // Go go power rangers! Target should now execute given statement
         ChildSemaphore.down(); // Wait until target actually runs the statement
-//        StartedSemaphore.down();
 #ifdef DEBUG
         qDebug() << "toDebug::execute before sync()";
 #endif
@@ -1167,7 +1250,9 @@ int toDebug::sync(void)
             {
                 qDebug() << "Error in communication with target session.";
             }
-            qDebug() << "toDebug::sync ret = " << ret << ", reason = " << getErrorText(reason, 2);
+            QString error;
+            getErrorText(reason, 2, error);
+            qDebug() << "toDebug::sync ret = " << ret << ", reason = " << error;
 #endif
             {
                 toLocker lock (Lock);
@@ -1186,7 +1271,9 @@ int toDebug::sync(void)
         }
         while (reason == TO_REASON_TIMEOUT || ret == TO_ERROR_TIMEOUT);
 #ifdef DEBUG
-        qDebug() << "toDebug::sync got reason = " << getErrorText(reason, 2);
+        QString error;
+        getErrorText(reason, 2, error);
+        qDebug() << "toDebug::sync got reason = " << error;
 #endif
         setDeferedBreakpoints();
         if (Output->enabled())
@@ -1653,16 +1740,37 @@ void toDebug::processWatches(void)
     }
 } // processWatches
 
+// Update state of different GUI elements of debugger tool depending on a state of debugging
+// If debugging session is running this will additionally fetch stack info and display it
+// in corresponding controls.
 void toDebug::updateState(int reason)
 {
 #ifdef DEBUG
-    qDebug() << "toDebug::updateState, reason = " << getErrorText(reason, 2);
+    QString error;
+    getErrorText(reason, 2, error);
+    qDebug() << "toDebug::updateState, reason = " << error;
 #endif
     switch (reason)
     {
     case TO_REASON_EXIT:
     case TO_REASON_KNL_EXIT:
+qDebug() << "stopping... ChildSemaphore.down()";
         ChildSemaphore.down();
+qDebug() << "target stopped. continuing";
+        // query (session) in target is marked as "cancelled" thus unusable
+        // therefore we have to finish it by sending SQL=""...
+        if (manualStopping)
+        {
+            {
+                toLocker lock (Lock);
+                QString emptySql("");
+                TargetSQL = toDeepCopy(emptySql);
+            }
+            TargetSemaphore.up(); // resume target session (it should quit)
+            ChildSemaphore.down(); // wait until target session finishes
+qDebug() << "target THREAD has been STOPPED";
+            manualStopping = false;
+        }
         // Intentionally no break here
     case TO_REASON_NO_SESSION:
         stopAct->setEnabled(false);
@@ -1748,9 +1856,13 @@ void toDebug::updateState(int reason)
 #endif
             if (ret != TO_SUCCESS)
             {
+                QString reason;
+
                 toStatusMessage(tr("Failed to get runtime info (Reason %1)").arg(ret));
 #ifdef DEBUG
-                qDebug() << "toDebug::updateState FAILED to get runtime info. Reason " << getErrorText(ret, 1/*error*/);
+                QString error;
+                getErrorText(ret, 1/*error*/, error);
+                qDebug() << "toDebug::updateState FAILED to get runtime info. Reason " << error;
 #endif
                 return ;
             }
@@ -1977,10 +2089,18 @@ static toSQL SQLContinue("toDebug:Continue",
                          "END;",
                          "Continue execution, must have same bindings");
 
+static toSQL SQLDetach("toDebug:Detach",
+                       "BEGIN\n"
+                       "  SYS.DBMS_DEBUG.DETACH_SESSION;\n"
+                       "END;",
+                       "Disconnect from the debugging session");
+
 int toDebug::continueExecution(int stopon)
 {
 #ifdef DEBUG
-    qDebug() << "toDebug::continueExecution(" << getErrorText(stopon, 3) << ")";
+    QString error;
+    getErrorText(stopon, 3, error);
+    qDebug() << "toDebug::continueExecution(" << error << ")";
 #endif
     Lock.lock();
     if (RunningTarget)
@@ -1989,30 +2109,42 @@ int toDebug::continueExecution(int stopon)
         try
         {
             int ret, reason;
-            setDeferedBreakpoints();
-            while (1)
+            if (stopon == TO_ABORT_EXECUTION && manualStopping) // no point to set breakpoints when aborting execution
             {
-                toQList args;
-                toPush(args, toQValue(stopon));
-                debugSession->execute(SQLContinue, args);
-                ret = debugSession->readValue().toInt();
-                reason = debugSession->readValue().toInt();
-#ifdef DEBUG
-                qDebug() << "toDebug::continueExecution ret=" << ret << ", reason=" << reason;
-#endif
-                if (reason == TO_REASON_TIMEOUT || ret == TO_ERROR_TIMEOUT)
+                // When stopping target session we have to cancel corresponding query rather
+                // than sending a ABORT_EXECUTION signal (which apparently kills whole target
+                // session
+                TargetQuery->cancel();
+                debugSession->execute(SQLDetach);
+                reason = TO_REASON_KNL_EXIT;
+            } // if stopon != TO_ABORT_EXECUTION
+            else
+            {
+                setDeferedBreakpoints();
+                while (1)
                 {
-                    reason = sync();
-                    if (reason < 0)
-                        ret = -1;
-                    else
-                        ret = TO_SUCCESS;
-                }
+                    toQList args;
+                    toPush(args, toQValue(stopon));
+                    debugSession->execute(SQLContinue, args);
+                    ret = debugSession->readValue().toInt();
+                    reason = debugSession->readValue().toInt();
+#ifdef DEBUG
+                    qDebug() << "toDebug::continueExecution ret=" << ret << ", reason=" << reason;
+#endif
+                    if (reason == TO_REASON_TIMEOUT || ret == TO_ERROR_TIMEOUT)
+                    {
+                        reason = sync();
+                        if (reason < 0)
+                            ret = -1;
+                        else
+                            ret = TO_SUCCESS;
+                    }
 
-                if (ret != TO_SUCCESS)
-                    return -1;
-                if (reason != TO_REASON_STARTING)
-                    break;
+                    if (ret != TO_SUCCESS)
+                        return -1;
+                    if (reason != TO_REASON_STARTING)
+                        break;
+                }
             }
             updateState(reason);
             return reason;
@@ -2028,7 +2160,9 @@ int toDebug::continueExecution(int stopon)
     return -1;
 }
 
-void toDebug::executeInTarget(const QString &str, toQList &params)
+// Executes given statement (with given parameters) in target session in DEBUG mode.
+// Currently this is only called to compile code in target session
+/*void toDebug::executeInTarget(const QString &str, toQList &params)
 {
 #ifdef DEBUG
     qDebug() << "toDebug::executeInTarget 1" << str;
@@ -2037,30 +2171,20 @@ void toDebug::executeInTarget(const QString &str, toQList &params)
     {
         toLocker lock (Lock);
         TargetSQL = toDeepCopy(str);
+        DebugTarget = false; // this is a compile statement, it must not be debugged
         InputData = params;
         TargetSemaphore.up();
     }
-//     StartedSemaphore.down();
+}*/
 
-    int ret = sync();
-    while (ret >= 0 && ret != TO_REASON_EXIT && ret != TO_REASON_KNL_EXIT && RunningTarget)
-    {
-        ret = continueExecution(TO_BREAK_ANY_RETURN);
-#ifdef DEBUG
-//        qDebug() << "ret = " << ret;
-#endif
-    }
-#ifdef DEBUG
-    qDebug() << "out of loop";
-#endif
-    readLog();
-//     qDebug() << "toDebug::executeInTarget 2";
-}
-
+// Stops execution of a running target session
 void toDebug::stop(void)
 {
     if (RunningTarget)
+    {
+        manualStopping = true;
         continueExecution(TO_ABORT_EXECUTION);
+    }
 }
 
 toDebug::toDebug(QWidget *main, toConnection &connection)
@@ -2070,12 +2194,6 @@ toDebug::toDebug(QWidget *main, toConnection &connection)
     debugSession = new toQuery(connection);
 
     createActions();
-
-    // these buttons should only be enabled after starting debug process
-    stopAct->setEnabled(false);
-    stepAct->setEnabled(false);
-    nextAct->setEnabled(false);
-    returnAct->setEnabled(false);
 
     QToolBar *toolbar = toAllocBar(this, tr("Debugger"));
     layout()->addWidget(toolbar);
@@ -2131,6 +2249,12 @@ toDebug::toDebug(QWidget *main, toConnection &connection)
     toolbar->addAction(changeWatchAct);
 
     toolbar->addWidget(new toSpacer());
+
+    // these buttons should only be enabled after starting debug process
+    stopAct->setEnabled(false);
+    stepAct->setEnabled(false);
+    nextAct->setEnabled(false);
+    returnAct->setEnabled(false);
 
     QSplitter *splitter = new QSplitter(Qt::Vertical, this);
     layout()->addWidget(splitter);
@@ -2227,6 +2351,7 @@ toDebug::toDebug(QWidget *main, toConnection &connection)
     DebugTabs->addTab(Parameters, tr("&Parameters"));
 
     Output = new toDebugOutput(this, DebugTabs, connection, debugSession);
+    Output->changeRefresh("None"); // disable output refresh timer until debugging starts
     DebugTabs->addTab(Output, tr("Debug &Output"));
 
     RuntimeLog = new toMarkedText(DebugTabs);
@@ -2234,6 +2359,12 @@ toDebug::toDebug(QWidget *main, toConnection &connection)
 
     Editors = new QTabWidget(hsplitter);
     Editors->setTabPosition(QTabWidget::North);
+#if QT_VERSION >= 0x040500
+    Editors->setTabsClosable(true);
+    connect(Editors, SIGNAL(tabCloseRequested(int)),
+            this, SLOT(closeEditor(int)));
+#endif
+
 
     QToolButton *closeButton = new toPopupButton(Editors);
     closeButton->setIcon(QPixmap(const_cast<const char**>(close_xpm)));
@@ -2250,9 +2381,14 @@ toDebug::toDebug(QWidget *main, toConnection &connection)
             this, SLOT(windowActivated(QMdiSubWindow *)));
 
     refresh();
-    connect(&StartTimer, SIGNAL(timeout(void)), this, SLOT(startTarget(void)));
 
-    StartTimer.start(1, true);
+    // TS 2010-07-08 Timer was used to initialised target session some time after launching
+    // debugger tool. From now on target session is only initialised when actually needed.
+    //connect(&StartTimer, SIGNAL(timeout(void)), this, SLOT(startTarget(void)));
+    //StartTimer.start(1, true);
+
+    closedAlready = false; // workaround (see todebug.h for details)
+    manualStopping = false;
 }
 
 
@@ -2575,9 +2711,12 @@ void toDebug::refresh(void)
 //     qDebug() << "toDebug::refresh 2";
 }
 
+// This function is called before trying to compile something.
+// As it is not possible to compile an already running code this function
+// asks user if he/she wants to stop debugging and compile or continue
+// debugging and not to compile.
 bool toDebug::checkStop(void)
 {
-//     qDebug() << "toDebug::checkStop 1";
     Lock.lock();
     if (RunningTarget)
     {
@@ -2586,14 +2725,14 @@ bool toDebug::checkStop(void)
                                       tr("Do you want to abort the current execution?"),
                                       tr("&Ok"), tr("Cancel")) != 0)
         {
-//             return false;
-            stop();
             return false;
         }
+        else
+            stop(); // stop debugging
+
     }
     else
         Lock.unlock();
-//     qDebug() << "toDebug::checkStop 2";
     return true;
 }
 
@@ -2655,11 +2794,19 @@ bool toDebug::close()
 
 void toDebug::closeEvent(QCloseEvent *e)
 {
+    // Workaround for double-call of this function. See todebug.h for details.
+    if (closedAlready)
+        return;
+    else
+        closedAlready = true;
+
 //     qDebug() << "toDebug::closeEvent 1";
     if (close())
     {
         try
         {
+            // Check if target thread (with target oracle session) is running.
+            // If it is - send a signal to quit.
             Lock.lock();
             if (DebuggerStarted)
             {
@@ -2667,7 +2814,7 @@ void toDebug::closeEvent(QCloseEvent *e)
                 stop();
                 {
                     toLocker lock (Lock);
-                    TargetSQL = "";
+                    TargetSQL = ""; // this is a signal for target thread to quit
                     TargetSemaphore.up();
                 }
                 ChildSemaphore.down();
@@ -2807,7 +2954,10 @@ bool toDebugText::compile(void)
         try
         {
             toQList nopar;
-            Debugger->executeInTarget(sql, nopar);
+            // TS 2010-07-10 Compilation no longer has to be done in target session
+            // because target session is only initialised when actually debugging.
+            //Debugger->executeInTarget(sql, nopar);
+            Debugger->connection().execute(sql, nopar);
             Schema = schema.toUpper();
             Object = Debugger->connection().unQuote(object.toUpper());
             Type = type.toUpper();
@@ -2838,7 +2988,7 @@ void toDebug::compile(void)
 #ifdef DEBUG
     qDebug() << "toDebug::compile start 2";
 #endif
-    if (!checkStop())
+    if (!checkStop()) // Check if target is currently running/debugging something
         return ;
 
     QString lastSchema = currentEditor()->schema();
@@ -3297,6 +3447,13 @@ void toDebug::closeEditor()
 {
     toDebugText *editor = currentEditor();
     closeEditor(editor);
+}
+
+void toDebug::closeEditor(int ix)
+{
+    toDebugText * w = qobject_cast<toDebugText*>(Editors->widget(ix));
+    assert(w);
+    closeEditor(w);
 }
 
 void toDebug::closeAllEditor()

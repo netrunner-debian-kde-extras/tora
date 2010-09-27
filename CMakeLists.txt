@@ -7,11 +7,12 @@ OPTION(WANT_INTERNAL_QSCINTILLA "Use internal/bundled QScintilla2 source" OFF)
 OPTION(ENABLE_ORACLE "Enable/Disable Oracle support at all. Including detection" ON)
 OPTION(ENABLE_PGSQL "Enable/Disable PostgreSQL support. Including detection" ON)
 OPTION(ENABLE_DB2 "Enable/Disable DB2 support. Including detection" ON)
+OPTION(ENABLE_TERADATA "Enable/Disable Teradata support." OFF)
 OPTION(WANT_RPM "Enable additional RPM related stuff. Additional make package_rpm target" ON)
 OPTION(WANT_BUNDLE "Enable Mac OS X bundle build" OFF)
 OPTION(WANT_BUNDLE_STANDALONE "Do not copy required libs and tools into bundle (WANT_BUNDLE)" ON)
 OPTION(USE_TROTL "Use trotl OCI wrapper library" OFF)
-OPTION(USE_PCH "Use percompiled headers" OFF)
+OPTION(USE_PCH "Use percompiled headers" ON)
 
 #Set our CMake minimum version
 #Require 2.4.2 for Qt finding
@@ -21,9 +22,18 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.4.5 FATAL_ERROR)
 
 # handle new cmake versions correctly
 if(COMMAND cmake_policy)
-  cmake_policy(SET CMP0003 NEW)
-  cmake_policy(SET CMP0005 OLD) # FIXME change it to new when there will be cmake 2.6.x in most distros
-  cmake_policy(SET CMP0011 NEW)
+  if (POLICY CMP0003)
+    cmake_policy(SET CMP0003 NEW)
+  endif (POLICY CMP0003)
+  if (POLICY CMP0005)
+    cmake_policy(SET CMP0005 OLD) # FIXME change it to new when there will be cmake 2.6.x in most distros
+  endif (POLICY CMP0005)
+  if (POLICY CMP0011)
+    cmake_policy(SET CMP0011 NEW)
+  endif (POLICY CMP0011)
+  if (POLICY CMP0015)
+    cmake_policy(SET CMP0015 NEW)
+  endif (POLICY CMP0015)
 endif(COMMAND cmake_policy)
 
 
@@ -51,7 +61,7 @@ PROJECT(TOra)
 #where VERSION_SUFFIX is of the form "", "cvs" or "Ncvs" (N being the minor patch level)
 SET (VERSION_MAJOR "2")
 SET (VERSION_MINOR "1")
-SET (VERSION_PATCH "2")
+SET (VERSION_PATCH "3")
 SET (VERSION_SUFFIX "")
 SET (VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}${VERSION_SUFFIX})
 MESSAGE(STATUS "TOra ${VERSION} will be built to install into ${CMAKE_INSTALL_PREFIX}")
@@ -128,10 +138,19 @@ ENDIF (CMAKE_COMPILER_IS_GNUCC)
 IF(WANT_DEBUG)
   SET(CMAKE_BUILD_TYPE Debug)
   ADD_DEFINITIONS("-DDEBUG")
+  
+  # Boost headers are required to compile with -DDEBUG (see tologger.h)
+  FIND_PACKAGE(Boost)
+  IF (Boost_FOUND)
+      MESSAGE(STATUS "Found Boost libraries for debug build")
+      include_directories(${Boost_INCLUDE_DIRS})
+  else (Boost_FOUND)
+      MESSAGE(FATAL "Boost libs not found. It's mandatory to build with debugging")
+  ENDIF (Boost_FOUND)
+
 ELSE(WANT_DEBUG)
   SET(CMAKE_BUILD_TYPE RELEASE)
 ENDIF(WANT_DEBUG)
-
 
 # Lets disable Wall warnings due the MSVC too much talkative
 # output. Wall can slow down compiletion up to hours and
@@ -139,6 +158,7 @@ ENDIF(WANT_DEBUG)
 # MSVC, MSVC_IDE, MSVC60, MSVC70, MSVC71, MSVC80, CMAKE_COMPILER_2005
 IF (MSVC)
     SET (CXX_WARNINGS "")
+    ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
 ELSE (MSVC)
     SET (CXX_WARNINGS "-Wall")
 ENDIF (MSVC)
@@ -149,7 +169,6 @@ IF (WIN32 AND NOT DEFINED WANT_INTERNAL_QSCINTILLA)
   SET(CMAKE_CXX_FLAGS_RELEASE "/DQSCINTILLA_DLL ${CMAKE_CXX_FLAGS_RELEASE}")
   SET(CMAKE_C_FLAGS_RELEASE "/DQSCINTILLA_DLL ${CMAKE_C_FLAGS_RELEASE}")
 ENDIF (WIN32 AND NOT DEFINED WANT_INTERNAL_QSCINTILLA)
-
 
 ##############################################################################################################
 ########## Find Dependencies                                                                        ##########
@@ -202,7 +221,7 @@ IF (NOT ENABLE_ORACLE)
     ADD_DEFINITIONS("-DTO_NO_ORACLE")
 ELSE (NOT ENABLE_ORACLE)
 
-  FIND_PACKAGE(Oracle)
+  FIND_PACKAGE(Oracle COMPONENTS CLNTSH XML)
   IF(ORACLE_FOUND)
       MESSAGE("Oracle OCI Library Found OK")
       # what else is hidden in the ifdef hell?!
@@ -246,14 +265,24 @@ ELSE (NOT ENABLE_DB2)
         ADD_DEFINITIONS(-DHAVE_DB2)
     ELSE (DB2_FOUND)
         MESSAGE(" ")
-        MESSAGE(WARNING " No DB2 client libraries have been found.")
-        MESSAGE(WARNING " TOra can be build without it - without DB2 support.")
-        MESSAGE(WARNING " Specify -DDB2_PATH_INCLUDES=path")
-        MESSAGE(WARNING "     and -DDB2_PATH_LIB=path manually")
+        MESSAGE(STATUS " No DB2 client libraries have been found.")
+        MESSAGE(STATUS " TOra can be build without it - without DB2 support.")
+        MESSAGE(STATUS " Specify -DDB2_PATH_INCLUDES=path")
+        MESSAGE(STATUS "     and -DDB2_PATH_LIB=path manually")
         MESSAGE(" ")
     ENDIF (DB2_FOUND)
 
 ENDIF (NOT ENABLE_DB2)
+
+IF (NOT ENABLE_TERADATA)
+    MESSAGE(STATUS "Teradata support disabled (enable with -DENABLE_TERADATA=on)")
+ELSE (NOT ENABLE_TERADATA)
+    FIND_PACKAGE(TERADATA)
+    IF (TERADATA_FOUND)
+        MESSAGE(STATUS "Teradata found")
+    ENDIF (TERADATA_FOUND)
+ENDIF (NOT ENABLE_TERADATA)
+
 
 ##############################################################################################################
 ########## Include Setup                                                                            ##########
@@ -331,20 +360,24 @@ INSTALL(FILES
 ENDIF (NOT WANT_BUNDLE)
 
 
+# packaging related stuff
+#SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Toolkit for Oracle")
+# SET(CPACK_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
+string(TOLOWER ${CMAKE_PROJECT_NAME} CPACK_PACKAGE_NAME)
+#SET(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README")
+#SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYING")
+SET(CPACK_PACKAGE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
+SET(CPACK_SOURCE_GENERATOR "TGZ;TBZ2")
+#SET(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}")
+SET(CPACK_SOURCE_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}")
+SET(CPACK_IGNORE_FILES "/CVS/;/\\\\.svn/;\\\\.swp$;\\\\.#;/#;\\\\.tar.gz$;/CMakeFiles/;CMakeCache.txt;refresh-copyright-and-license.pl")
+SET(CPACK_SOURCE_IGNORE_FILES ${CPACK_IGNORE_FILES})
+INCLUDE(CPack)
+# simulate autotools' "make dist"
+add_custom_target(dist COMMAND ${CMAKE_MAKE_PROGRAM} package_source)
+
+
 IF (WANT_RPM)
-    # packaging related stuff
-    #SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Toolkit for Oracle")
-    SET(CPACK_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
-    #SET(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README")
-    #SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYING")
-    SET(CPACK_PACKAGE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
-    SET(CPACK_SOURCE_GENERATOR "TGZ")
-    #SET(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}")
-    SET(CPACK_SOURCE_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}")
-    SET(CPACK_IGNORE_FILES "/CVS/;/\\\\.svn/;\\\\.swp$;\\\\.#;/#;\\\\.tar.gz$;/CMakeFiles/;CMakeCache.txt")
-    SET(CPACK_SOURCE_IGNORE_FILES ${CPACK_IGNORE_FILES})
-    INCLUDE(CPack)
-    
     # Check for SVN
     FIND_PACKAGE(Subversion)
     IF(NOT Subversion_FOUND)

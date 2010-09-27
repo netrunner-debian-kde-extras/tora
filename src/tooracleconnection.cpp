@@ -363,7 +363,8 @@ class oracleQuery : public toQuery::queryImpl
                         }
                         while (!lob.eof() && sink.len() > 0);
 
-                        toStatusMessage(QString::fromLatin1("Data exists past length of LOB"));
+                        toStatusMessage(QObject::tr("Data exists past configured maximum LOB length (Preferences)",
+                                                    "toOracleConnection"));
                     }
                     buffer[data.len()] = 0;
                     Running = false;
@@ -898,7 +899,7 @@ class oracleConnection : public toConnection::connectionImpl
             {
                 // Ignore any errors here
             }
-            return QString::QString();
+            return QString();
         }
 
         virtual toQuery::queryImpl *createQuery(toQuery *query, toConnectionSub *sub)

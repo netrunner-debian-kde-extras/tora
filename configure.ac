@@ -1,6 +1,6 @@
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([tora],[2.1.2],[tora-develop@lists.sourceforge.net])
+AC_INIT([tora],[2.1.3],[tora-develop@lists.sourceforge.net])
 AC_PREREQ([2.59])
 AC_CONFIG_AUX_DIR(config)
 # Every other copy of the package version number gets its value from here
@@ -39,6 +39,8 @@ AC_STRUCT_ST_BLOCKS
 AC_FUNC_CLOSEDIR_VOID
 AC_TYPE_SIZE_T
 
+AC_DEFINE(SCI_LEXER, 1, [Always defined in CMake build.])
+
 AC_VALIDIFY_CXXFLAGS
 TORA_DEBUG
 TORA_CHECK_MONO
@@ -49,6 +51,7 @@ AC_PATH_MOC
 AC_PATH_UIC
 AC_PATH_RCC
 TORA_CHECK_POSTGRES
+TORA_CHECK_TERADATA
 TORA_CHECK_ORACLE
 TORA_CHECK_QSCINTILLA
 AX_PATH_LIB_PCRE
@@ -57,6 +60,7 @@ AM_CONDITIONAL([CPPUNIT], [test "x$found_cppunit" = "xyes"])
 
 # Makefile.am uses these
 AM_CONDITIONAL(HAVE_ORACLE, test "$enable_oracle" = yes)
+AM_CONDITIONAL(HAVE_TERADATA, test "$enable_teradata" = yes)
 
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([utils/Makefile])

@@ -49,6 +49,7 @@ am__aclocal_m4_deps = $(top_srcdir)/config/m4/ax_cflags_gcc_option.m4 \
 	$(top_srcdir)/config/m4/pcre.m4 \
 	$(top_srcdir)/config/m4/postgresql.m4 \
 	$(top_srcdir)/config/m4/qtkde.m4 \
+	$(top_srcdir)/config/m4/teradata.m4 \
 	$(top_srcdir)/config/m4/tora.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -154,28 +155,29 @@ am__tora_SOURCES_DIST = main.cpp tomainwindow.cpp tomainwindow.h \
 	tobrowsercodewidget.cpp tobrowsercodewidget.h \
 	tobrowsertriggerwidget.cpp tobrowsertriggerwidget.h \
 	tobrowserdblinkswidget.cpp tobrowserdblinkswidget.h \
-	toresultgrants.cpp toresultgrants.h \
-	migratetool/sqldeveloper.cpp migratetool/sqldeveloper.h \
-	migratetool/squirrelsql.cpp migratetool/squirrelsql.h \
-	migratetool/tora3.cpp migratetool/tora3.h \
-	shortcuteditor/shortcuteditordialog.cpp \
+	tobrowserdirectorieswidget.cpp tobrowserdirectorieswidget.h \
+	toresultgrants.cpp toresultgrants.h toawr.cpp toawr.h \
+	precompiled.h migratetool/sqldeveloper.cpp \
+	migratetool/sqldeveloper.h migratetool/squirrelsql.cpp \
+	migratetool/squirrelsql.h migratetool/tora3.cpp \
+	migratetool/tora3.h shortcuteditor/shortcuteditordialog.cpp \
 	shortcuteditor/shortcuteditordialog.h \
 	shortcuteditor/shortcutmodel.cpp \
 	shortcuteditor/shortcutmodel.h tooracleconnection.cpp \
 	tooraclesetting.h tooracletable.cpp tooracleextract.cpp \
-	otl/otlv4.h $(LOKIDIR_SRC)/SmallObj.cpp \
-	$(LOKIDIR_SRC)/Singleton.cpp moc_toabout.cpp moc_toalert.cpp \
-	moc_toanalyze.cpp moc_tobackup.cpp moc_tobarchart.cpp \
-	moc_tobackgroundlabel.cpp moc_tobrowser.cpp \
-	moc_tobrowserconstraint.cpp moc_tobrowserindex.cpp \
-	moc_tobrowsertable.cpp moc_tochangeconnection.cpp \
-	moc_tochartmanager.cpp moc_toconnection.cpp \
-	moc_toconnectionmodel.cpp moc_tocodemodel.cpp \
-	moc_toconnectionpool.cpp moc_toconnectionimport.cpp \
-	moc_todescribe.cpp moc_torunnable.cpp moc_tonoblockquery.cpp \
-	moc_toeventquery.cpp moc_toeventquerytask.cpp \
-	moc_tocurrent.cpp moc_todatatype.cpp moc_todebug.cpp \
-	moc_todebugtext.cpp moc_toeditextensions.cpp \
+	otl/otlv4.h toteradataconnection.cpp \
+	$(LOKIDIR_SRC)/SmallObj.cpp $(LOKIDIR_SRC)/Singleton.cpp \
+	moc_toabout.cpp moc_toalert.cpp moc_toanalyze.cpp \
+	moc_tobackup.cpp moc_tobarchart.cpp moc_tobackgroundlabel.cpp \
+	moc_tobrowser.cpp moc_tobrowserconstraint.cpp \
+	moc_tobrowserindex.cpp moc_tobrowsertable.cpp \
+	moc_tochangeconnection.cpp moc_tochartmanager.cpp \
+	moc_toconnection.cpp moc_toconnectionmodel.cpp \
+	moc_tocodemodel.cpp moc_toconnectionpool.cpp \
+	moc_toconnectionimport.cpp moc_todescribe.cpp \
+	moc_torunnable.cpp moc_tonoblockquery.cpp moc_toeventquery.cpp \
+	moc_toeventquerytask.cpp moc_tocurrent.cpp moc_todatatype.cpp \
+	moc_todebug.cpp moc_todebugtext.cpp moc_toeditextensions.cpp \
 	moc_tofilesize.cpp moc_toglobalsetting.cpp moc_tohelp.cpp \
 	moc_tohelpsetup.cpp moc_tohighlightedtext.cpp \
 	moc_toinvalid.cpp moc_tolegendchart.cpp moc_tolinechart.cpp \
@@ -216,7 +218,8 @@ am__tora_SOURCES_DIST = main.cpp tomainwindow.cpp tomainwindow.h \
 	moc_tobrowserindexwidget.cpp moc_tobrowserschemawidget.cpp \
 	moc_tobrowsersequencewidget.cpp moc_tobrowsersynonymwidget.cpp \
 	moc_tobrowsercodewidget.cpp moc_tobrowsertriggerwidget.cpp \
-	moc_tobrowserdblinkswidget.cpp moc_toresultgrants.cpp \
+	moc_tobrowserdblinkswidget.cpp \
+	moc_tobrowserdirectorieswidget.cpp moc_toresultgrants.cpp \
 	docklets/moc_toviewdirectory.cpp \
 	docklets/moc_toviewconnections.cpp ui_toaboutui.h \
 	ui_todroptablespaceui.h ui_tobrowserconstraintui.h \
@@ -247,8 +250,10 @@ am__tora_SOURCES_DIST = main.cpp tomainwindow.cpp tomainwindow.h \
 @HAVE_ORACLE_TRUE@am__objects_1 = tora-tooracleconnection.$(OBJEXT) \
 @HAVE_ORACLE_TRUE@	tora-tooracletable.$(OBJEXT) \
 @HAVE_ORACLE_TRUE@	tora-tooracleextract.$(OBJEXT)
-@HAVE_ORACLE_TRUE@am__objects_2 = tora-moc_tooraclesetting.$(OBJEXT)
-am__objects_3 = tora-moc_toabout.$(OBJEXT) tora-moc_toalert.$(OBJEXT) \
+@HAVE_TERADATA_TRUE@am__objects_2 =  \
+@HAVE_TERADATA_TRUE@	tora-toteradataconnection.$(OBJEXT)
+@HAVE_ORACLE_TRUE@am__objects_3 = tora-moc_tooraclesetting.$(OBJEXT)
+am__objects_4 = tora-moc_toabout.$(OBJEXT) tora-moc_toalert.$(OBJEXT) \
 	tora-moc_toanalyze.$(OBJEXT) tora-moc_tobackup.$(OBJEXT) \
 	tora-moc_tobarchart.$(OBJEXT) \
 	tora-moc_tobackgroundlabel.$(OBJEXT) \
@@ -344,9 +349,10 @@ am__objects_3 = tora-moc_toabout.$(OBJEXT) tora-moc_toalert.$(OBJEXT) \
 	tora-moc_tobrowsercodewidget.$(OBJEXT) \
 	tora-moc_tobrowsertriggerwidget.$(OBJEXT) \
 	tora-moc_tobrowserdblinkswidget.$(OBJEXT) \
+	tora-moc_tobrowserdirectorieswidget.$(OBJEXT) \
 	tora-moc_toresultgrants.$(OBJEXT) \
 	tora-moc_toviewdirectory.$(OBJEXT) \
-	tora-moc_toviewconnections.$(OBJEXT) $(am__objects_2) \
+	tora-moc_toviewconnections.$(OBJEXT) $(am__objects_3) \
 	tora-qrc_tora.$(OBJEXT)
 am_tora_OBJECTS = tora-main.$(OBJEXT) tora-tomainwindow.$(OBJEXT) \
 	tora-toabout.$(OBJEXT) tora-tobackground.$(OBJEXT) \
@@ -436,15 +442,17 @@ am_tora_OBJECTS = tora-main.$(OBJEXT) tora-tomainwindow.$(OBJEXT) \
 	tora-tobrowsercodewidget.$(OBJEXT) \
 	tora-tobrowsertriggerwidget.$(OBJEXT) \
 	tora-tobrowserdblinkswidget.$(OBJEXT) \
-	tora-toresultgrants.$(OBJEXT) tora-sqldeveloper.$(OBJEXT) \
-	tora-squirrelsql.$(OBJEXT) tora-tora3.$(OBJEXT) \
-	tora-shortcuteditordialog.$(OBJEXT) \
-	tora-shortcutmodel.$(OBJEXT) $(am__objects_1) \
+	tora-tobrowserdirectorieswidget.$(OBJEXT) \
+	tora-toresultgrants.$(OBJEXT) tora-toawr.$(OBJEXT) \
+	tora-sqldeveloper.$(OBJEXT) tora-squirrelsql.$(OBJEXT) \
+	tora-tora3.$(OBJEXT) tora-shortcuteditordialog.$(OBJEXT) \
+	tora-shortcutmodel.$(OBJEXT) $(am__objects_1) $(am__objects_2) \
 	tora-SmallObj.$(OBJEXT) tora-Singleton.$(OBJEXT) \
-	$(am__objects_3)
+	$(am__objects_4)
 tora_OBJECTS = $(am_tora_OBJECTS)
 am__DEPENDENCIES_1 =
-tora_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+tora_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 tora_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(tora_CXXFLAGS) $(CXXFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
@@ -541,6 +549,7 @@ PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
+PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PCRE_CFLAGS = @PCRE_CFLAGS@
@@ -558,6 +567,9 @@ SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
+TERADATA_CXXFLAGS = @TERADATA_CXXFLAGS@
+TERADATA_LDFLAGS = @TERADATA_LDFLAGS@
+TERADATA_LIBS = @TERADATA_LIBS@
 UIC = @UIC@
 VERSION = @VERSION@
 WIN_CXXFLAGS = @WIN_CXXFLAGS@
@@ -640,25 +652,28 @@ LOKIDIR_SRC = $(top_srcdir)/src/loki/src
 AM_CPPFLAGS = -I./otl -I$(LOKIDIR_INC) $(QT_INCLUDES) $(LTDLINCL) \
 	$(PCRE_CFLAGS) -DDEFAULT_PLUGIN_DIR=\"$(libdir)\" \
 	-DTOVERSION=\"$(PACKAGE_VERSION)\" $(ORACLE_CXXFLAGS) \
-	$(QT_DEFINES) $(WIN_CXXFLAGS) $(QSCINTILLA_CXXFLAGS)
+	$(TERADATA_CXXFLAGS) $(QT_DEFINES) $(WIN_CXXFLAGS) \
+	$(QSCINTILLA_CXXFLAGS)
 AM_LDFLAGS = $(PCRE_LIBS) \
 	$(QT_LDFLAGS) \
 	$(LIB_DCOP) \
 	-lstdc++ \
 	$(LIBPTHREAD) \
 	$(ORACLE_LDFLAGS) \
+	$(TERADATA_LDFLAGS) \
 	$(WIN_LDFLAGS) \
 	$(QSCINTILLA_LDFLAGS)
 
 
 # fix for annoying automake naming problems.
 tora_CXXFLAGS = $(AM_CXXFLAGS)
-tora_LDADD = $(ORACLE_LIBS) $(PQ_LIBS) $(@TORA_LINK_OTHERS@)
+tora_LDADD = $(ORACLE_LIBS) $(PQ_LIBS) $(TERADATA_LIBS) $(@TORA_LINK_OTHERS@)
 @HAVE_ORACLE_TRUE@EXTRA_ORACLE_MONO_SOURCE = tooracleconnection.cpp tooraclesetting.h \
 @HAVE_ORACLE_TRUE@	tooracletable.cpp \
 @HAVE_ORACLE_TRUE@	tooracleextract.cpp otl/otlv4.h
 
 @HAVE_ORACLE_TRUE@EXTRA_ORACLE_MONO_SOURCE_MOC = moc_tooraclesetting.cpp
+@HAVE_TERADATA_TRUE@EXTRA_TERADATE_SOURCE = toteradataconnection.cpp
 tora_SOURCES = main.cpp \
 	tomainwindow.cpp tomainwindow.h \
 	toabout.cpp toabout.h \
@@ -810,13 +825,17 @@ tora_SOURCES = main.cpp \
     tobrowsercodewidget.cpp tobrowsercodewidget.h \
     tobrowsertriggerwidget.cpp tobrowsertriggerwidget.h \
     tobrowserdblinkswidget.cpp tobrowserdblinkswidget.h \
+    tobrowserdirectorieswidget.cpp tobrowserdirectorieswidget.h \
     toresultgrants.cpp toresultgrants.h \
+	toawr.cpp toawr.h \
+	precompiled.h \
 	migratetool/sqldeveloper.cpp migratetool/sqldeveloper.h \
 	migratetool/squirrelsql.cpp migratetool/squirrelsql.h \
 	migratetool/tora3.cpp migratetool/tora3.h \
 	shortcuteditor/shortcuteditordialog.cpp shortcuteditor/shortcuteditordialog.h \
 	shortcuteditor/shortcutmodel.cpp shortcuteditor/shortcutmodel.h \
 	$(EXTRA_ORACLE_MONO_SOURCE) \
+	$(EXTRA_TERADATE_SOURCE) \
 	$(LOKIDIR_SRC)/SmallObj.cpp \
 	$(LOKIDIR_SRC)/Singleton.cpp \
 	$(EXTRA_tora_SOURCES) \
@@ -1034,6 +1053,7 @@ BUILT_SOURCES = \
     moc_tobrowsercodewidget.cpp \
     moc_tobrowsertriggerwidget.cpp \
     moc_tobrowserdblinkswidget.cpp \
+    moc_tobrowserdirectorieswidget.cpp \
     moc_toresultgrants.cpp \
 	docklets/moc_toviewdirectory.cpp \
 	docklets/moc_toviewconnections.cpp \
@@ -1195,6 +1215,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-moc_tobrowsercodewidget.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-moc_tobrowserconstraint.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-moc_tobrowserdblinkswidget.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-moc_tobrowserdirectorieswidget.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-moc_tobrowserindex.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-moc_tobrowserindexwidget.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-moc_tobrowserschemawidget.Po@am__quote@
@@ -1316,6 +1337,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-toabout.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-toalert.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-toanalyze.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-toawr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-tobackground.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-tobackgroundlabel.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-tobackup.Po@am__quote@
@@ -1327,6 +1349,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-tobrowsercodewidget.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-tobrowserconstraint.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-tobrowserdblinkswidget.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-tobrowserdirectorieswidget.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-tobrowserindex.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-tobrowserindexwidget.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-tobrowserschemawidget.Po@am__quote@
@@ -1449,6 +1472,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-totemplate.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-totemplateprovider.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-totemporary.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-toteradataconnection.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-totextview.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-tothread.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tora-totimer.Po@am__quote@
@@ -3574,6 +3598,20 @@ tora-tobrowserdblinkswidget.obj: tobrowserdblinkswidget.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -c -o tora-tobrowserdblinkswidget.obj `if test -f 'tobrowserdblinkswidget.cpp'; then $(CYGPATH_W) 'tobrowserdblinkswidget.cpp'; else $(CYGPATH_W) '$(srcdir)/tobrowserdblinkswidget.cpp'; fi`
 
+tora-tobrowserdirectorieswidget.o: tobrowserdirectorieswidget.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -MT tora-tobrowserdirectorieswidget.o -MD -MP -MF $(DEPDIR)/tora-tobrowserdirectorieswidget.Tpo -c -o tora-tobrowserdirectorieswidget.o `test -f 'tobrowserdirectorieswidget.cpp' || echo '$(srcdir)/'`tobrowserdirectorieswidget.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/tora-tobrowserdirectorieswidget.Tpo $(DEPDIR)/tora-tobrowserdirectorieswidget.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='tobrowserdirectorieswidget.cpp' object='tora-tobrowserdirectorieswidget.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -c -o tora-tobrowserdirectorieswidget.o `test -f 'tobrowserdirectorieswidget.cpp' || echo '$(srcdir)/'`tobrowserdirectorieswidget.cpp
+
+tora-tobrowserdirectorieswidget.obj: tobrowserdirectorieswidget.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -MT tora-tobrowserdirectorieswidget.obj -MD -MP -MF $(DEPDIR)/tora-tobrowserdirectorieswidget.Tpo -c -o tora-tobrowserdirectorieswidget.obj `if test -f 'tobrowserdirectorieswidget.cpp'; then $(CYGPATH_W) 'tobrowserdirectorieswidget.cpp'; else $(CYGPATH_W) '$(srcdir)/tobrowserdirectorieswidget.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/tora-tobrowserdirectorieswidget.Tpo $(DEPDIR)/tora-tobrowserdirectorieswidget.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='tobrowserdirectorieswidget.cpp' object='tora-tobrowserdirectorieswidget.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -c -o tora-tobrowserdirectorieswidget.obj `if test -f 'tobrowserdirectorieswidget.cpp'; then $(CYGPATH_W) 'tobrowserdirectorieswidget.cpp'; else $(CYGPATH_W) '$(srcdir)/tobrowserdirectorieswidget.cpp'; fi`
+
 tora-toresultgrants.o: toresultgrants.cpp
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -MT tora-toresultgrants.o -MD -MP -MF $(DEPDIR)/tora-toresultgrants.Tpo -c -o tora-toresultgrants.o `test -f 'toresultgrants.cpp' || echo '$(srcdir)/'`toresultgrants.cpp
 @am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/tora-toresultgrants.Tpo $(DEPDIR)/tora-toresultgrants.Po
@@ -3587,6 +3625,20 @@ tora-toresultgrants.obj: toresultgrants.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='toresultgrants.cpp' object='tora-toresultgrants.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -c -o tora-toresultgrants.obj `if test -f 'toresultgrants.cpp'; then $(CYGPATH_W) 'toresultgrants.cpp'; else $(CYGPATH_W) '$(srcdir)/toresultgrants.cpp'; fi`
+
+tora-toawr.o: toawr.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -MT tora-toawr.o -MD -MP -MF $(DEPDIR)/tora-toawr.Tpo -c -o tora-toawr.o `test -f 'toawr.cpp' || echo '$(srcdir)/'`toawr.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/tora-toawr.Tpo $(DEPDIR)/tora-toawr.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='toawr.cpp' object='tora-toawr.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -c -o tora-toawr.o `test -f 'toawr.cpp' || echo '$(srcdir)/'`toawr.cpp
+
+tora-toawr.obj: toawr.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -MT tora-toawr.obj -MD -MP -MF $(DEPDIR)/tora-toawr.Tpo -c -o tora-toawr.obj `if test -f 'toawr.cpp'; then $(CYGPATH_W) 'toawr.cpp'; else $(CYGPATH_W) '$(srcdir)/toawr.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/tora-toawr.Tpo $(DEPDIR)/tora-toawr.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='toawr.cpp' object='tora-toawr.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -c -o tora-toawr.obj `if test -f 'toawr.cpp'; then $(CYGPATH_W) 'toawr.cpp'; else $(CYGPATH_W) '$(srcdir)/toawr.cpp'; fi`
 
 tora-sqldeveloper.o: migratetool/sqldeveloper.cpp
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -MT tora-sqldeveloper.o -MD -MP -MF $(DEPDIR)/tora-sqldeveloper.Tpo -c -o tora-sqldeveloper.o `test -f 'migratetool/sqldeveloper.cpp' || echo '$(srcdir)/'`migratetool/sqldeveloper.cpp
@@ -3699,6 +3751,20 @@ tora-tooracleextract.obj: tooracleextract.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='tooracleextract.cpp' object='tora-tooracleextract.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -c -o tora-tooracleextract.obj `if test -f 'tooracleextract.cpp'; then $(CYGPATH_W) 'tooracleextract.cpp'; else $(CYGPATH_W) '$(srcdir)/tooracleextract.cpp'; fi`
+
+tora-toteradataconnection.o: toteradataconnection.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -MT tora-toteradataconnection.o -MD -MP -MF $(DEPDIR)/tora-toteradataconnection.Tpo -c -o tora-toteradataconnection.o `test -f 'toteradataconnection.cpp' || echo '$(srcdir)/'`toteradataconnection.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/tora-toteradataconnection.Tpo $(DEPDIR)/tora-toteradataconnection.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='toteradataconnection.cpp' object='tora-toteradataconnection.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -c -o tora-toteradataconnection.o `test -f 'toteradataconnection.cpp' || echo '$(srcdir)/'`toteradataconnection.cpp
+
+tora-toteradataconnection.obj: toteradataconnection.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -MT tora-toteradataconnection.obj -MD -MP -MF $(DEPDIR)/tora-toteradataconnection.Tpo -c -o tora-toteradataconnection.obj `if test -f 'toteradataconnection.cpp'; then $(CYGPATH_W) 'toteradataconnection.cpp'; else $(CYGPATH_W) '$(srcdir)/toteradataconnection.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/tora-toteradataconnection.Tpo $(DEPDIR)/tora-toteradataconnection.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='toteradataconnection.cpp' object='tora-toteradataconnection.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -c -o tora-toteradataconnection.obj `if test -f 'toteradataconnection.cpp'; then $(CYGPATH_W) 'toteradataconnection.cpp'; else $(CYGPATH_W) '$(srcdir)/toteradataconnection.cpp'; fi`
 
 tora-SmallObj.o: $(LOKIDIR_SRC)/SmallObj.cpp
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -MT tora-SmallObj.o -MD -MP -MF $(DEPDIR)/tora-SmallObj.Tpo -c -o tora-SmallObj.o `test -f '$(LOKIDIR_SRC)/SmallObj.cpp' || echo '$(srcdir)/'`$(LOKIDIR_SRC)/SmallObj.cpp
@@ -5449,6 +5515,20 @@ tora-moc_tobrowserdblinkswidget.obj: moc_tobrowserdblinkswidget.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='moc_tobrowserdblinkswidget.cpp' object='tora-moc_tobrowserdblinkswidget.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -c -o tora-moc_tobrowserdblinkswidget.obj `if test -f 'moc_tobrowserdblinkswidget.cpp'; then $(CYGPATH_W) 'moc_tobrowserdblinkswidget.cpp'; else $(CYGPATH_W) '$(srcdir)/moc_tobrowserdblinkswidget.cpp'; fi`
+
+tora-moc_tobrowserdirectorieswidget.o: moc_tobrowserdirectorieswidget.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -MT tora-moc_tobrowserdirectorieswidget.o -MD -MP -MF $(DEPDIR)/tora-moc_tobrowserdirectorieswidget.Tpo -c -o tora-moc_tobrowserdirectorieswidget.o `test -f 'moc_tobrowserdirectorieswidget.cpp' || echo '$(srcdir)/'`moc_tobrowserdirectorieswidget.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/tora-moc_tobrowserdirectorieswidget.Tpo $(DEPDIR)/tora-moc_tobrowserdirectorieswidget.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='moc_tobrowserdirectorieswidget.cpp' object='tora-moc_tobrowserdirectorieswidget.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -c -o tora-moc_tobrowserdirectorieswidget.o `test -f 'moc_tobrowserdirectorieswidget.cpp' || echo '$(srcdir)/'`moc_tobrowserdirectorieswidget.cpp
+
+tora-moc_tobrowserdirectorieswidget.obj: moc_tobrowserdirectorieswidget.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -MT tora-moc_tobrowserdirectorieswidget.obj -MD -MP -MF $(DEPDIR)/tora-moc_tobrowserdirectorieswidget.Tpo -c -o tora-moc_tobrowserdirectorieswidget.obj `if test -f 'moc_tobrowserdirectorieswidget.cpp'; then $(CYGPATH_W) 'moc_tobrowserdirectorieswidget.cpp'; else $(CYGPATH_W) '$(srcdir)/moc_tobrowserdirectorieswidget.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/tora-moc_tobrowserdirectorieswidget.Tpo $(DEPDIR)/tora-moc_tobrowserdirectorieswidget.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='moc_tobrowserdirectorieswidget.cpp' object='tora-moc_tobrowserdirectorieswidget.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -c -o tora-moc_tobrowserdirectorieswidget.obj `if test -f 'moc_tobrowserdirectorieswidget.cpp'; then $(CYGPATH_W) 'moc_tobrowserdirectorieswidget.cpp'; else $(CYGPATH_W) '$(srcdir)/moc_tobrowserdirectorieswidget.cpp'; fi`
 
 tora-moc_toresultgrants.o: moc_toresultgrants.cpp
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tora_CXXFLAGS) $(CXXFLAGS) -MT tora-moc_toresultgrants.o -MD -MP -MF $(DEPDIR)/tora-moc_toresultgrants.Tpo -c -o tora-moc_toresultgrants.o `test -f 'moc_toresultgrants.cpp' || echo '$(srcdir)/'`moc_toresultgrants.cpp

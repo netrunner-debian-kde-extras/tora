@@ -56,6 +56,7 @@ toResultField::toResultField(QWidget *parent, const char *name)
     setReadOnly(true);
     Query = NULL;
     connect(&Poll, SIGNAL(timeout()), this, SLOT(poll()));
+    whichResultField = 1;
 }
 
 toResultField::~toResultField()
@@ -98,7 +99,24 @@ void toResultField::poll(void)
         {
             while (Query->poll() && !Query->eof())
             {
+                // For some MySQL statements (say "show create function aaa.bbb") more than one column is returned
+                // and it is not possible to control that (or I do not know how to do it). This workaround will get
+                // a required field (say 3rd) from a result set returned.
+                int fieldNo = whichResultField; // by default this would be set to 1 in constructor
+                while (fieldNo > 1)
+                {
+                    fieldNo--;
+                    Query->readValue();
+                }
                 Unapplied += Query->readValue();
+
+                // Read any remaining columns for queries with specific field to fetch.
+                // This is primarily used for MySQL statements like "show create..." which
+                // return different uncontrollable number of fields for different users.
+                // If remaining fields are not fetched polling thread will loop.
+                if (whichResultField > 1)
+                    while (!Query->eof())
+                        Query->readValue();
             }
             if (Unapplied.length() > THRESHOLD)
             {
@@ -112,7 +130,10 @@ void toResultField::poll(void)
                 Poll.stop();
                 try
                 {
-                    if (toConfigurationSingle::Instance().autoIndentRo())
+                    // Code is formatted if it is set in preferences (Preferences->Editor Extensions) to
+                    // indent (format) a read only code AND! if it is not a MySQL code because current
+                    // TOra code parser/indenter does not work correctly with MySQL code (routines)
+                    if (toConfigurationSingle::Instance().autoIndentRo() && !toIsMySQL(connection()))
                         setText(toSQLParse::indent(text() + Unapplied));
                     else
                         append(Unapplied);

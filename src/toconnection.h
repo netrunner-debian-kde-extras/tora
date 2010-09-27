@@ -216,6 +216,7 @@ private:
     std::list<toQValue> Params;
     QString SQL;
     queryMode Mode;
+    bool showBusy; // does a "busy" indicator has to be shown while query is running (default - true)
 
     queryImpl *Query;
     toQuery(const toQuery &);
@@ -507,6 +508,13 @@ public:
     /** Cancel the current execution of a query.
      */
     void cancel(void);
+
+    /** Specify if busy cursor must be displayed while a query is running
+     */
+    void setShowBusy(bool busy)
+    {
+        showBusy = busy;
+    }
 };
 
 /** A short representation of a @ref toQuery::queryDescribe
@@ -519,7 +527,7 @@ Q_DECLARE_METATYPE(toQDescList);
 
 
 /** Represent a database connection in TOra. Observe that this can mean several actual
- * connections to the database as queries that ae expected to run a long time are sometimes
+ * connections to the database as queries that are expected to run a long time are sometimes
  * executed in their own connection to make sure the interface doesn't lock up for a long time.
  */
 class toConnection : public QObject
@@ -616,7 +624,7 @@ public:
         bool operator == (const objectName &) const;
     };
 
-    /** This class is an abstract baseclass to actually implement the comunication with the
+    /** This class is an abstract baseclass to actually implement the communication with the
      * database.
      * (See also @ref toQuery::queryImpl and @ref toConnectionProvider)
      */
@@ -874,16 +882,16 @@ public:
      */
     virtual QString description(bool version = true) const;
 
-    /** Set if this connection needs to be commited.
+    /** Set if this connection needs to be committed.
      */
     void setNeedCommit(bool needCommit = true)
     {
         NeedCommit = needCommit;
     }
     /**
-     * Get information about if the connection has uncommited data.
+     * Get information about if the connection has uncommitted data.
      *
-     * @return Whether uncommited data is available.
+     * @return Whether uncommitted data is available.
      */
     bool needCommit(void) const
     {
@@ -1065,6 +1073,14 @@ public:
      * @return A list of the columns for a table.
      */
     toQDescList &columns(const objectName &table, bool nocache = false);
+
+    /**
+     * Get a list of object names for a owner, typically this is a
+     * list of tables for a database or schema.
+     *
+     */
+    std::list<objectName> tables(const objectName &object, bool nocache = false);
+
     /**
      * Reread the object and column cache.
      */
@@ -1177,7 +1193,7 @@ public:
 
     /** Get a list of options available for the connection. An option with the name
      * "-" indicates a break should be made to separate the rest of the options from the previous
-     * options. An option preceeded by "*" means selected by default. The * shoul be stripped before
+     * options. An option preceded by "*" means selected by default. The * shoul be stripped before
      * before passing it to the connection call.
      */
     virtual std::list<QString> providedOptions(const QString &provider);

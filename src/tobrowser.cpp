@@ -125,6 +125,7 @@
 #include "tobrowsercodewidget.h"
 #include "tobrowsertriggerwidget.h"
 #include "tobrowserdblinkswidget.h"
+#include "tobrowserdirectorieswidget.h"
 #include "tobrowseraccesswidget.h"
 #include "tobrowserschemawidget.h"
 
@@ -150,7 +151,7 @@ QWidget *toBrowserTool::toolWindow(QWidget *parent, toConnection &connection)
 
 bool toBrowserTool::canHandle(toConnection &conn)
 {
-    return toIsOracle(conn) || toIsMySQL(conn) || toIsPostgreSQL(conn) || toIsSapDB(conn);
+    return toIsOracle(conn) || toIsMySQL(conn) || toIsPostgreSQL(conn) || toIsSapDB(conn) || toIsTeradata(conn);
 }
 
 void toBrowserTool::customSetup()
@@ -665,15 +666,24 @@ public:
 #define TAB_DBLINK_INFO  "DBLinkInfo"
 #define TAB_DBLINK_SYNONYMS "DBLinkSynonyms"
 
+#define TAB_DIRECTORIES  "Directories"
+
 #define TAB_ACCESS  "Access"
 #define TAB_ACCESS_CONTENT "AccessContent"
 #define TAB_ACCESS_USER  "AccessUser"
 #define TAB_ACCESS_OBJECTS "AccessObjects"
 
-static toSQL SQLListTablesMysql("toBrowser:ListTables",
-                                "SHOW TABLES FROM `:f1<noquote>`",
+static toSQL SQLListTablesMysql3("toBrowser:ListTables",
+                                "SHOW TABLES FROM :f1<noquote>",
                                 "List the available tables in a schema.",
                                 "3.0",
+                                "MySQL");
+static toSQL SQLListTablesMysql("toBrowser:ListTables",
+                                "SELECT TABLE_NAME TABLES\n"
+                                "    FROM information_schema.tables\n"
+                                "    WHERE table_schema = :f1<char[101]>",
+                                "",
+                                "5.0",
                                 "MySQL");
 static toSQL SQLListTables("toBrowser:ListTables",
                            "SELECT Table_Name,NULL \" Ignore\",NULL \" Ignore2\",Tablespace_name \" Ignore2\"\n"
@@ -713,61 +723,70 @@ static toSQL SQLListTablesSapDB("toBrowser:ListTables",
                                 "",
                                 "",
                                 "SapDB");
-
-static toSQL SQLTableIndex("toBrowser:TableIndex",
-                           "SELECT IND.index_name AS \"Index Name\",\n"
-                           "       ind.column_name AS \"Column Name\",\n"
-                           "       al.uniqueness AS \"Unique\",\n"
-                           "       AL.index_type AS \"Type\",\n"
-                           "       EX.column_expression AS \"Column Expression\"\n"
-                           "  FROM SYS.ALL_IND_COLUMNS IND,\n"
-                           "       SYS.ALL_IND_EXPRESSIONS EX,\n"
-                           "       sys.All_Indexes AL\n"
-                           " WHERE IND.INDEX_OWNER = :own<char[101]>\n"
-                           "   AND IND.TABLE_NAME = :nam<char[101]>\n"
-                           "   AND EX.index_owner ( + ) = IND.index_owner\n"
-                           "   AND EX.index_name ( + ) = IND.index_name\n"
-                           "   AND IND.index_name = AL.index_name ( + )\n"
-                           "   AND IND.index_owner = AL.owner ( + )",
-                           "List the indexes on a table",
-                           "");
-static toSQL SQLTableIndexSapDB("toBrowser:TableIndex",
-                                "SELECT owner,\n"
-                                "       indexname \"Index_Name\",\n"
-                                "       'NORMAL',\n"
-                                "       type\n"
-                                " FROM indexes \n"
-                                " WHERE owner = :f1<char[101]> and tablename = :f2<char[101]> \n"
-                                " ORDER by indexname",
-                                "",
-                                "",
-                                "SapDB");
-
-static toSQL SQLTableIndexPG("toBrowser:TableIndex",
-                             "SELECT u.usename AS \"Owner\",\n"
-                             "       c2.relname AS \"Index Name\",\n"
-                             "       pg_get_indexdef(i.indexrelid) as \"Definition\"\n"
-                             "  FROM pg_class c,\n"
-                             "       pg_class c2,\n"
-                             "       pg_index i,\n"
-                             "       pg_user u,\n"
-                             "       pg_namespace n\n"
-                             " WHERE c.relowner = u.usesysid\n"
-                             "   AND n.nspname = :f1\n"
-                             "   AND c.relname = :f2\n"
-                             "   AND c.relowner = u.usesysid\n"
-                             "   AND n.OID = c.relnamespace\n"
-                             "   AND c.OID = i.indrelid\n"
-                             "   AND i.indexrelid = c2.OID",
+static toSQL SQLListTablesTD("toBrowser:ListTables",
+                             "SELECT trim ( tablename ) AS \"Table Name\"\n"
+                             "  FROM dbc.TABLES\n"
+                             " WHERE databasename = trim ( upper ( :f1<char[101]> ) )\n"
+                             "   AND tablekind = 'T'\n"
+                             " ORDER BY 1",
                              "",
                              "",
-                             "PostgreSQL");
+                             "Teradata");
 
-static toSQL SQLTableIndexMySQL("toBrowser:TableIndex",
-                                "SHOW INDEX FROM `:f1<noquote>`.`:tab<noquote>`",
-                                "",
-                                "",
-                                "MySQL");
+// static toSQL SQLTableIndex("toBrowser:TableIndex",
+//                            "SELECT IND.index_name AS \"Index Name\",\n"
+//                            "       ind.column_name AS \"Column Name\",\n"
+//                            "       al.uniqueness AS \"Unique\",\n"
+//                            "       AL.index_type AS \"Type\",\n"
+//                            "       EX.column_expression AS \"Column Expression\"\n"
+//                            "  FROM SYS.ALL_IND_COLUMNS IND,\n"
+//                            "       SYS.ALL_IND_EXPRESSIONS EX,\n"
+//                            "       sys.All_Indexes AL\n"
+//                            " WHERE IND.INDEX_OWNER = :own<char[101]>\n"
+//                            "   AND IND.TABLE_NAME = :nam<char[101]>\n"
+//                            "   AND EX.index_owner ( + ) = IND.index_owner\n"
+//                            "   AND EX.index_name ( + ) = IND.index_name\n"
+//                            "   AND IND.index_name = AL.index_name ( + )\n"
+//                            "   AND IND.index_owner = AL.owner ( + )",
+//                            "List the indexes on a table",
+//                            "");
+// static toSQL SQLTableIndexSapDB("toBrowser:TableIndex",
+//                                 "SELECT owner,\n"
+//                                 "       indexname \"Index_Name\",\n"
+//                                 "       'NORMAL',\n"
+//                                 "       type\n"
+//                                 " FROM indexes \n"
+//                                 " WHERE owner = :f1<char[101]> and tablename = :f2<char[101]> \n"
+//                                 " ORDER by indexname",
+//                                 "",
+//                                 "",
+//                                 "SapDB");
+// 
+// static toSQL SQLTableIndexPG("toBrowser:TableIndex",
+//                              "SELECT u.usename AS \"Owner\",\n"
+//                              "       c2.relname AS \"Index Name\",\n"
+//                              "       pg_get_indexdef(i.indexrelid) as \"Definition\"\n"
+//                              "  FROM pg_class c,\n"
+//                              "       pg_class c2,\n"
+//                              "       pg_index i,\n"
+//                              "       pg_user u,\n"
+//                              "       pg_namespace n\n"
+//                              " WHERE c.relowner = u.usesysid\n"
+//                              "   AND n.nspname = :f1\n"
+//                              "   AND c.relname = :f2\n"
+//                              "   AND c.relowner = u.usesysid\n"
+//                              "   AND n.OID = c.relnamespace\n"
+//                              "   AND c.OID = i.indrelid\n"
+//                              "   AND i.indexrelid = c2.OID",
+//                              "",
+//                              "",
+//                              "PostgreSQL");
+// 
+// static toSQL SQLTableIndexMySQL3("toBrowser:TableIndex",
+//                                 "SHOW INDEX FROM `:f1<noquote>`.`:tab<noquote>`",
+//                                 "",
+//                                 "3.0",
+//                                 "MySQL");
 
 // static toSQL SQLTableConstraint(
 //     "toBrowser:TableConstraint",
@@ -1021,6 +1040,16 @@ static toSQL SQLListViewSapDb("toBrowser:ListView",
                               "",
                               "",
                               "SapDB");
+static toSQL SQLListViewTD("toBrowser:ListView",
+                           "SELECT trim ( tablename ) AS \"View_Name\"\n"
+                           "  FROM dbc.TABLES\n"
+                           " WHERE databasename = trim ( upper ( :f1<char[101]> ) )\n"
+                           "   AND tablekind = 'V'\n"
+                           " ORDER BY 1",
+                           "",
+                           "",
+                           "Teradata");
+
 // static toSQL SQLViewSQLPgSQL("toBrowser:ViewSQL",
 //                              "SELECT pg_get_viewdef(c.relname)\n"
 //                              "  FROM pg_class c LEFT OUTER JOIN pg_namespace n ON c.relnamespace=n.oid\n"
@@ -1327,6 +1356,13 @@ static toSQL SQLListDBLinkDBA("toBrowser:ListDBLinkDBA",
 //                                "   AND DB_LINK = :f2<char[101]>",
 //                                "Display foreign synonyms");
 // #endif
+
+static toSQL SQLListDirectories("toBrowser:ListDirectories",
+                           "SELECT DISTINCT directory_name FROM SYS.ALL_DIRECTORIES\n"
+                           " WHERE (owner = 'SYS' or owner=:f1<char[101]>) and\n"
+                           " UPPER(directory_name) like :f2<char[101]>",
+                           " ORDER BY directory_name",
+                           "List database external directories");
 
 static toSQL SQLMySQLAccess("toBrowser:MySQLAcess",
                             "SHOW TABLES FROM mysql",
@@ -1680,10 +1716,10 @@ toBrowser::toBrowser(QWidget *parent, toConnection &connection)
             SIGNAL(selectionChanged()),
             this,
             SLOT(changeItem()));
-    connect(dblinkView,
-            SIGNAL(displayMenu(QMenu *)),
-            this,
-            SLOT(displayIndexMenu(QMenu *)));
+//     connect(dblinkView,
+//             SIGNAL(displayMenu(QMenu *)),
+//             this,
+//             SLOT(displayIndexMenu(QMenu *)));
 
     dblinkWidget->resize(FIRST_WIDTH, dblinkView->height());
     dblinkSplitter->setStretchFactor(dblinkSplitter->indexOf(dblinkView), 0);
@@ -1692,6 +1728,43 @@ toBrowser::toBrowser(QWidget *parent, toConnection &connection)
     m_objectsMap[dblinkSplitter] = dblinkView;
     m_browsersMap[dblinkSplitter] = dblinkBrowserWidget;
 // #endif // dblink
+
+    
+    
+    directoriesSplitter = new QSplitter(Qt::Horizontal, m_mainTab);
+    directoriesSplitter->setObjectName(TAB_DIRECTORIES);
+
+    QWidget * directoriesWidget = new QWidget(directoriesSplitter);
+
+    QVBoxLayout * directoriesLayout = new QVBoxLayout;
+    directoriesLayout->setSpacing(0);
+    directoriesLayout->setContentsMargins(0, 0, 0, 0);
+    directoriesWidget->setLayout(directoriesLayout);
+
+    directoriesView = new toBrowserSchemaTableView(directoriesWidget);
+    directoriesBrowserWidget = new toBrowserDirectoriesWidget(directoriesSplitter);
+
+    directoriesLayout->addWidget(directoriesView);
+    directoriesView->setReadAll(true);
+    directoriesView->setSQL(SQLListDirectories);
+    directoriesView->resize(FIRST_WIDTH, directoriesView->height());
+
+    connect(directoriesView,
+            SIGNAL(selectionChanged()),
+            this,
+            SLOT(changeItem()));
+//     connect(directoriesView,
+//             SIGNAL(displayMenu(QMenu *)),
+//             this,
+//             SLOT(displayIndexMenu(QMenu *)));
+
+    directoriesWidget->resize(FIRST_WIDTH, directoriesView->height());
+    directoriesSplitter->setStretchFactor(directoriesSplitter->indexOf(directoriesView), 0);
+    directoriesSplitter->setStretchFactor(directoriesSplitter->indexOf(directoriesBrowserWidget), 1);
+
+    m_objectsMap[directoriesSplitter] = directoriesView;
+    m_browsersMap[directoriesSplitter] = directoriesBrowserWidget;
+
 
     accessSplitter = new QSplitter(Qt::Horizontal, m_mainTab);
     accessSplitter->setObjectName(TAB_ACCESS);
@@ -1772,7 +1845,10 @@ void toBrowser::mainTab_currentChanged(int /*ix*/)
                "main widget of the tab is not QSplitter as is mandatory!");
 
     if (m_objectsMap.contains(ix))
+    {
         m_objectsMap[ix]->changeParams(schema(), Filter ? Filter->wildCard() : "%");
+        changeItem();
+    }
     else
         qDebug() << "mainTab_currentChanged unhandled index:" << ix;
 }
@@ -1904,24 +1980,23 @@ void toBrowser::changeConnection(void)
 
     // enable/disable main tabs depending on DB
     m_mainTab->clear();
-    addTab(tableSplitter, tr("T&ables"),
-           true);
-    addTab(viewSplitter, tr("&Views"),
-           !toIsMySQL(connection()));
-    addTab(indexSplitter, tr("Inde&xes"),
-           true);
+    addTab(tableSplitter, tr("T&ables"), true);
+    addTab(viewSplitter, tr("&Views"), !toIsMySQL(connection()));
+    addTab(indexSplitter, tr("Inde&xes"), true);
     addTab(sequenceSplitter, tr("Se&quences"),
            toIsOracle(connection()) || toIsPostgreSQL(connection()));
     addTab(synonymSplitter, tr("S&ynonyms"),
            toIsOracle(connection()));
-    addTab(codeSplitter, tr("Cod&e"),
-           !toIsMySQL(connection()));
+    // 2010-03-31
+    // Starting with version 5.0 MySQL supports stored functions/procedures
+    // If TOra is used a lot with older versions of MySQL the "true" parameter
+    // should be enhanced with a check for MySQL version
+    addTab(codeSplitter, tr("Cod&e"), true);
     addTab(triggerSplitter, tr("Tri&ggers"),
            !toIsMySQL(connection()) && !toIsPostgreSQL(connection()));
-    addTab(dblinkSplitter, tr("DBLinks"),
-           toIsOracle(connection()));
-    addTab(accessSplitter, tr("Access"),
-           toIsMySQL(connection()));
+    addTab(dblinkSplitter, tr("DBLinks"), toIsOracle(connection()));
+    addTab(directoriesSplitter, tr("Directories"), toIsOracle(connection()));
+    addTab(accessSplitter, tr("Access"), toIsMySQL(connection()));
 
     foreach (toBrowserBaseWidget * w, m_browsersMap.values())
     w->changeConnection();
@@ -1962,7 +2037,21 @@ void toBrowser::changeItem()
 
     if (m_browsersMap.contains(ix))
     {
-        m_browsersMap[ix]->changeParams(schema(), currentItemText());
+        if (ix != codeSplitter)
+            m_browsersMap[ix]->changeParams(schema(), currentItemText());
+        else
+        {
+            // If code browser has been clicked we need to know type of code (function, procedure...) too
+            // as it is not possible to identify code by just schema and object (in MySQL there can be
+            // a function and procedure with the same name in the same schema)
+            toBrowserSchemaCodeBrowser * browser = dynamic_cast<toBrowserSchemaCodeBrowser*>(m_objectsMap[ix]);
+            if (!browser)
+            {
+                qDebug("Only for code - toBrowserSchemaCodeBrowser cast!");
+                return;
+            }
+            m_browsersMap[ix]->changeParams(schema(), currentItemText(), browser->objectType());
+        }
     }
     else
         qDebug() << "changeItem() unhandled index" << ix;
