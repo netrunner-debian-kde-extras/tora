@@ -104,7 +104,6 @@
 
 toMain::toMain()
         : toMainWindow(),
-        toBackupTool_(new toBackupTool),
         BackgroundLabel(new toBackgroundLabel(statusBar()))
 {
     Edit = NULL;
@@ -120,6 +119,9 @@ toMain::toMain()
 
     Message = new toMessage(this);
 
+    // it needs go first due signal/slot connection in it
+    handleToolsDisplay();
+
     // setup all QAction objects
     createActions();
 
@@ -133,8 +135,6 @@ toMain::toMain()
     createToolMenus();
 
     createDocklets();
-
-    handleToolsDisplay();
 
     updateRecent();
 
@@ -722,8 +722,20 @@ void toMain::createDockbars()
 void toMain::handleToolsDisplay()
 {
 #if QT_VERSION >= 0x040400
-    if (toConfigurationSingle::Instance().tabbedTools())
+    if (toConfigurationSingle::Instance().tabbedTools()) {
         Workspace->setViewMode(QMdiArea::TabbedView);
+#if QT_VERSION >= 0x040500
+        // HACK: a workaround for missing QMdiArea feature. Real patch is waiting in the Qt4 bugtracker.
+        foreach (QTabBar *b, Workspace->findChildren<QTabBar*>())
+        {
+            b->setTabsClosable(true);
+            connect(b, SIGNAL(tabCloseRequested(int)), this, SLOT(workspaceCloseWindow(int)));
+            // we should be quite sure that the QMdiArea tab-widget
+            // goes first (because findChildren is called recursively)
+            break;
+        }
+#endif
+    }
     else
         Workspace->setViewMode(QMdiArea::SubWindowView);
 #endif
@@ -919,6 +931,8 @@ void toMain::recentCallback(QAction *action)
 
     if (edit)
         edit->editOpen(action->toolTip());
+    else
+        this->editOpenFile(action->toolTip());
 }
 
 
@@ -1044,8 +1058,6 @@ void toMain::commandCallback(QAction *action)
             else
                 searchReplaceAct->activate(QAction::Trigger);
         }
-        else if (action == openAct)
-            edit->editOpen();
         else if (action == saveAsAct)
             edit->editSave(true);
         else if (action == saveAct)
@@ -1053,6 +1065,13 @@ void toMain::commandCallback(QAction *action)
         else if (action == printAct)
             edit->editPrint();
     } // if edit
+
+    if (action == openAct && !this->Connections.empty()) {
+        if (edit)
+            edit->editOpen();
+        else
+            this->editOpenFile(QString::null);
+    }
 
     if (action == commitAct)
     {
@@ -1348,7 +1367,7 @@ void toMain::editDisable(toEditWidget *edit)
     if (main)
     {
         main->editEnable(edit,
-                         false,
+                         !main->Connections.empty(),
                          false,
                          false,
                          false,
@@ -1448,6 +1467,8 @@ void toMain::enableConnectionActions(bool enabled)
     stopAct->setEnabled(enabled);
     closeConn->setEnabled(enabled);
     refreshAct->setEnabled(enabled);
+    openAct->setEnabled(enabled);
+    recentMenu->setEnabled(enabled);
 
     // now, loop through tools and enable/disable
 
@@ -1695,6 +1716,27 @@ void toMain::showMessageImpl(const QString &str, bool save, bool log)
 }
 
 
+// HACK: workaround for close button in the tabs. See HACK note near the QMdiArea construction.
+void toMain::workspaceCloseWindow(int ix)
+{
+    QMdiSubWindow * w = Workspace->subWindowList()[ix];
+    assert(w);
+    if (w != Workspace->activeSubWindow())
+    {
+        Workspace->setActiveSubWindow(w);
+    }
+    // HACK in HACK: toWorksheet's behaviour is strange here.
+    // it gets a QObject 0x0 pointer in this case. So this
+    // will handle it.
+    // Let's hope the MDI patch will be applied ASAP...
+    if (!Workspace->activeSubWindow())
+    {
+        w->close();
+    }
+    Workspace->closeActiveSubWindow();
+}
+
+
 void toMain::checkCaching(void)
 {
     int num = 0;
@@ -1822,16 +1864,13 @@ void toMain::importData(std::map<QString, QString> &data, const QString &prefix)
         QString password = toUnobfuscate(data[key + ":Password"]);
         QString provider = data[key + ":Provider"];
         bool ok = true;
-        // NOTE: it looks like there was a CONF_SAVE_PWD mismatch for ages.
-        // Sometimes it's used for "should I store passwords for sessions (bool),
-        // here it's taken as a string. WTF?
         if (toConfigurationSingle::Instance().defaultPassword() == password)
         {
             password = QInputDialog::getText(this,
                                              tr("Input password"),
                                              tr("Enter password for %1").arg(database),
                                              QLineEdit::Password,
-                                             QString::fromLatin1(DEFAULT_SAVE_PWD),
+                                             "",
                                              &ok);
         }
         if (ok)

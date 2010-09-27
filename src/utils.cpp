@@ -101,6 +101,8 @@
 #undef QT_TRANSLATE_NOOP
 #define QT_TRANSLATE_NOOP(x,y) QTRANS(x,y)
 
+// toSQL::TOSQL_USERLIST is used to populate toResultSchema
+
 static toSQL SQLUserNamesMySQL(toSQL::TOSQL_USERLIST,
                                "SHOW DATABASES",
                                "List users in the database",
@@ -122,6 +124,18 @@ static toSQL SQLUserNamesSapDB(toSQL::TOSQL_USERLIST,
                                "",
                                "",
                                "SapDB");
+
+static toSQL SQLUserNamesTD(
+    toSQL::TOSQL_USERLIST,
+    "SELECT trim ( databasename )\n"
+    "  FROM dbc.UserRights\n"
+    " UNION\n"
+    "SELECT trim ( databasename )\n"
+    "  FROM dbc.UserRoleRights\n"
+    " GROUP BY 1",
+    "",
+    "",
+    "Teradata");
 
 static toSQL SQLTextPiece("Global:SQLText",
                           "SELECT SQL_Text\n"
@@ -159,6 +173,12 @@ static toSQL SQLNowPgSQL("Global:Now",
                          "",
                          "7.1",
                          "PostgreSQL");
+
+static toSQL SQLNowTD("Global:Now",
+                      "SELECT CURRENT_DATE",
+                         "",
+                      "",
+                      "Teradata");
 
 QString toNow(toConnection &conn)
 {
@@ -945,18 +965,21 @@ toConnection &toCurrentConnection(QObject *cur)
     throw qApp->translate("toCurrentConnection", "Couldn't find parent connection. Internal error.");
 }
 
-toBusy::toBusy()
+toBusy::toBusy(bool busy)
 {
-    QMetaObject::invokeMethod(toMainWidget(),
-                              "showBusy",
-                              Qt::QueuedConnection);
+    Busy = busy;
+    if (busy)
+        QMetaObject::invokeMethod(toMainWidget(),
+                                  "showBusy",
+                                  Qt::QueuedConnection);
 }
 
 toBusy::~toBusy()
 {
-    QMetaObject::invokeMethod(toMainWidget(),
-                              "removeBusy",
-                              Qt::QueuedConnection);
+    if (Busy)
+        QMetaObject::invokeMethod(toMainWidget(),
+                                  "removeBusy",
+                                  Qt::QueuedConnection);
 }
 
 void toReadableColumn(QString &name)
@@ -1002,6 +1025,11 @@ bool toIsMySQL(const toConnection &conn)
 bool toIsPostgreSQL(const toConnection &conn)
 {
     return conn.provider() == "PostgreSQL";
+}
+
+bool toIsTeradata(const toConnection &conn)
+{
+    return conn.provider() == "Teradata";
 }
 
 static toTreeWidgetItem *FindItem(toTreeWidget *lst, toTreeWidgetItem *first, const QString &str)

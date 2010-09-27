@@ -58,7 +58,9 @@
 #include <QHeaderView>
 #include <QMenu>
 
-
+/*! \brief Displays query result as a table and provides functionality to edit it.
+  Used in Schema browser tool.
+*/
 class toResultTableViewEdit : public toResultTableView
 {
     Q_OBJECT;
@@ -85,8 +87,8 @@ class toResultTableViewEdit : public toResultTableView
     // this is a fifo -- don't sort or insert. just append.
     QList<struct ChangeSet> Changes;
 
-    QString Owner;
-    QString Table;
+    //QString Owner; // defined in parent - toResultTableView
+    //QString Table; // defined in parent - toResultTableView
 
     void commitDelete(ChangeSet &change, toConnection &conn);
     void commitAdd(ChangeSet &change, toConnection &conn);
@@ -201,7 +203,7 @@ public slots:
     /**
      * Handle connection toolbar's commit and rollback.
      *
-     * @param conn Connection that is commited.
+     * @param conn Connection that is committed.
      * @param cmt true for commit, false for rollback
      */
     void commitChanges(toConnection &conn, bool cmt);

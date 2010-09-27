@@ -49,6 +49,7 @@ am__aclocal_m4_deps = $(top_srcdir)/config/m4/ax_cflags_gcc_option.m4 \
 	$(top_srcdir)/config/m4/pcre.m4 \
 	$(top_srcdir)/config/m4/postgresql.m4 \
 	$(top_srcdir)/config/m4/qtkde.m4 \
+	$(top_srcdir)/config/m4/teradata.m4 \
 	$(top_srcdir)/config/m4/tora.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -144,6 +145,7 @@ PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
+PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PCRE_CFLAGS = @PCRE_CFLAGS@
@@ -161,6 +163,9 @@ SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
+TERADATA_CXXFLAGS = @TERADATA_CXXFLAGS@
+TERADATA_LDFLAGS = @TERADATA_LDFLAGS@
+TERADATA_LIBS = @TERADATA_LIBS@
 UIC = @UIC@
 VERSION = @VERSION@
 WIN_CXXFLAGS = @WIN_CXXFLAGS@

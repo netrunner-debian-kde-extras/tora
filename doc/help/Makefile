@@ -47,6 +47,7 @@ am__aclocal_m4_deps = $(top_srcdir)/config/m4/ax_cflags_gcc_option.m4 \
 	$(top_srcdir)/config/m4/pcre.m4 \
 	$(top_srcdir)/config/m4/postgresql.m4 \
 	$(top_srcdir)/config/m4/qtkde.m4 \
+	$(top_srcdir)/config/m4/teradata.m4 \
 	$(top_srcdir)/config/m4/tora.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -92,13 +93,13 @@ am__base_list = \
   sed '$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;s/\n/ /g' | \
   sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
-ACLOCAL = ${SHELL} /home/tomas/tora/tora/config/missing --run aclocal-1.11
+ACLOCAL = ${SHELL} /home/tomas/prog/tora/tora/config/missing --run aclocal-1.11
 ALLOCA = 
-AMTAR = ${SHELL} /home/tomas/tora/tora/config/missing --run tar
+AMTAR = ${SHELL} /home/tomas/prog/tora/tora/config/missing --run tar
 AR = ar
-AUTOCONF = ${SHELL} /home/tomas/tora/tora/config/missing --run autoconf
-AUTOHEADER = ${SHELL} /home/tomas/tora/tora/config/missing --run autoheader
-AUTOMAKE = ${SHELL} /home/tomas/tora/tora/config/missing --run automake-1.11
+AUTOCONF = ${SHELL} /home/tomas/prog/tora/tora/config/missing --run autoconf
+AUTOHEADER = ${SHELL} /home/tomas/prog/tora/tora/config/missing --run autoheader
+AUTOMAKE = ${SHELL} /home/tomas/prog/tora/tora/config/missing --run automake-1.11
 AWK = gawk
 CC = gcc
 CCDEPMODE = depmode=gcc3
@@ -129,7 +130,7 @@ INSTALL_DATA = ${INSTALL} -m 644
 INSTALL_PROGRAM = ${INSTALL}
 INSTALL_SCRIPT = ${INSTALL}
 INSTALL_STRIP_PROGRAM = $(install_sh) -c -s
-ISODATE = 2010-03-26
+ISODATE = 2010-09-19
 LD = /usr/bin/ld
 LDFLAGS =  -DQT_NO_DEBUG
 LIBOBJS = 
@@ -141,7 +142,7 @@ LN_S = ln -s
 LRELEASE = /usr/lib/qt4/bin/lrelease-qt4
 LTLIBOBJS = 
 LUPDATE = /usr/lib/qt4/bin/lupdate-qt4
-MAKEINFO = ${SHELL} /home/tomas/tora/tora/config/missing --run makeinfo
+MAKEINFO = ${SHELL} /home/tomas/prog/tora/tora/config/missing --run makeinfo
 MKDIR_P = /bin/mkdir -p
 MOC = /usr/lib/qt4/bin/moc-qt4
 NM = /usr/bin/nm -B
@@ -156,9 +157,10 @@ OTOOL64 =
 PACKAGE = tora
 PACKAGE_BUGREPORT = tora-develop@lists.sourceforge.net
 PACKAGE_NAME = tora
-PACKAGE_STRING = tora 2.1.2
+PACKAGE_STRING = tora 2.1.3
 PACKAGE_TARNAME = tora
-PACKAGE_VERSION = 2.1.2
+PACKAGE_URL = 
+PACKAGE_VERSION = 2.1.3
 PATH_SEPARATOR = :
 PCRE_CFLAGS = 
 PCRE_LIBS = -lpcre
@@ -175,8 +177,11 @@ SED = /bin/sed
 SET_MAKE = 
 SHELL = /bin/sh
 STRIP = strip
+TERADATA_CXXFLAGS = 
+TERADATA_LDFLAGS = 
+TERADATA_LIBS = 
 UIC = /usr/lib/qt4/bin/uic-qt4
-VERSION = 2.1.2
+VERSION = 2.1.3
 WIN_CXXFLAGS = 
 WIN_LDFLAGS = 
 XMKMF = 
@@ -184,10 +189,10 @@ X_CFLAGS =
 X_EXTRA_LIBS = 
 X_LIBS = 
 X_PRE_LIBS =  -lSM -lICE
-abs_builddir = /home/tomas/tora/tora/doc/help
-abs_srcdir = /home/tomas/tora/tora/doc/help
-abs_top_builddir = /home/tomas/tora/tora
-abs_top_srcdir = /home/tomas/tora/tora
+abs_builddir = /home/tomas/prog/tora/tora/doc/help
+abs_srcdir = /home/tomas/prog/tora/tora/doc/help
+abs_top_builddir = /home/tomas/prog/tora/tora
+abs_top_srcdir = /home/tomas/prog/tora/tora
 ac_ct_CC = gcc
 ac_ct_CXX = g++
 ac_ct_DUMPBIN = 
@@ -219,7 +224,7 @@ host_vendor = pc
 htmldir = ${docdir}
 includedir = ${prefix}/include
 infodir = ${datarootdir}/info
-install_sh = ${SHELL} /home/tomas/tora/tora/config/install-sh
+install_sh = ${SHELL} /home/tomas/prog/tora/tora/config/install-sh
 libdir = ${exec_prefix}/lib
 libexecdir = ${exec_prefix}/libexec
 localedir = ${datarootdir}/locale

@@ -49,6 +49,8 @@
 #include "totool.h"
 
 #include <Qsci/qsciprinter.h>
+#include <Qsci/qscilexer.h>
+#include <Qsci/qsciabstractapis.h>
 
 #include <qapplication.h>
 #include <qfileinfo.h>
@@ -68,6 +70,8 @@
 #include <QDir>
 #include <QApplication>
 #include <QPrintDialog>
+#include <QDomDocument>
+#include <QFileSystemWatcher>
 
 #include "icons/undo.xpm"
 #include "icons/redo.xpm"
@@ -112,6 +116,10 @@ toMarkedText::toMarkedText(QWidget *parent, const char *name)
     connect(this, SIGNAL(textChanged()), this, SLOT(setTextChanged()));
     connect(this, SIGNAL(copyAvailable(bool)), this, SLOT(setCopyAvailable(bool)));
     connect(this, SIGNAL(linesChanged()), this, SLOT(linesChanged()));
+
+    m_fsWatcher = new QFileSystemWatcher(this);
+    connect(m_fsWatcher, SIGNAL(fileChanged(const QString&)),
+            this, SLOT(m_fsWatcher_fileChanged(const QString &)));
 
     CursorTimerID = -1;
 
@@ -160,6 +168,22 @@ void toMarkedText::linesChanged()
     setMarginWidth(0, QString().fill('0', x));
 }
 
+void toMarkedText::m_fsWatcher_fileChanged(const QString & filename)
+{
+    m_fsWatcher->blockSignals(true);
+    setFocus(Qt::OtherFocusReason);
+    if (QMessageBox::question(this, tr("External File Modification"),
+                              tr("File %1 was modified by an external application. Reload (your changes will be lost)?").arg(filename),
+                              QMessageBox::Yes, QMessageBox::No)
+            == QMessageBox::No)
+    {
+        return;
+    }
+    openFilename(filename);
+    m_fsWatcher->blockSignals(false);
+}
+
+
 void toMarkedText::setWordWrap(bool enable)
 {
     if (enable)
@@ -173,6 +197,28 @@ void toMarkedText::setWordWrap(bool enable)
         setWrapMode(QsciScintilla::WrapNone);
         setWrapVisualFlags(QsciScintilla::WrapFlagNone,
                             QsciScintilla::WrapFlagNone);
+    }
+}
+
+void toMarkedText::setXMLWrap(bool wrap)
+{
+    if (wrap)
+    {
+        QDomDocument d;
+        if (m_origContent.isEmpty())
+            m_origContent = text();
+        if (d.setContent(m_origContent))
+            setText(d.toString(2));
+        else
+            m_origContent.clear();
+    }
+    else
+    {
+        if (!m_origContent.isEmpty())
+        {
+            setText(m_origContent);
+            m_origContent.clear();
+        }
     }
 }
 
@@ -271,11 +317,16 @@ void toMarkedText::editPrint(void)
 
 void toMarkedText::openFilename(const QString &file)
 {
+    fsWatcherClear();
+
     QString data = toReadFile(file);
     setText(data);
     setFilename(file);
     setModified(false);
     toMainWidget()->addRecentFile(file);
+
+    m_fsWatcher->addPath(file);
+
     toStatusMessage(tr("File opened successfully"), false, false);
 }
 
@@ -296,13 +347,11 @@ bool toMarkedText::editOpen(QString suggestedFile)
     }
 
     QString fname;
-    if (suggestedFile != QString::null)
+    if (!suggestedFile.isEmpty())
         fname = suggestedFile;
     else
-    {
-        QFileInfo file(filename());
-        fname = toOpenFilename(file.dir().path(), QString::null, this);
-    }
+        fname = toOpenFilename(QDir::currentPath(), QString::null, this);
+
     if (!fname.isEmpty())
     {
         try
@@ -320,21 +369,25 @@ bool toMarkedText::editOpen(QString suggestedFile)
 
 bool toMarkedText::editSave(bool askfile)
 {
+    fsWatcherClear();
+    bool ret = false;
+        
     QFileInfo file(filename());
     QString fn = filename();
     if (askfile || fn.isEmpty())
         fn = toSaveFilename(file.dir().path(), QString::null, this);
-    if (!fn.isEmpty())
+    if (!fn.isEmpty() && toWriteFile(fn, text()))
     {
-        if (!toWriteFile(fn, text()))
-            return false;
         toMainWidget()->addRecentFile(fn);
         setFilename(fn);
         setModified(false);
         emit fileSaved(fn);
-        return true;
+
+        ret = true;
     }
-    return false;
+
+    m_fsWatcher->addPath(fn);
+    return ret;
 }
 
 void toMarkedText::newLine(void)
@@ -452,6 +505,13 @@ void toMarkedText::incrementalSearch(bool forward, bool next)
     }
     toStatusMessage(tr("Incremental search") + QString::fromLatin1(":") + SearchString + QString::fromLatin1(" (failed)"), false, false);
     SearchFailed = true;
+}
+
+void toMarkedText::fsWatcherClear()
+{
+    QStringList l(m_fsWatcher->files());
+    if (!l.empty())
+        m_fsWatcher->removePaths(l);
 }
 
 void toMarkedText::dropEvent(QDropEvent *e)
@@ -770,6 +830,17 @@ void toMarkedText::insert(const QString &str, bool select)
         setSelection(lineFrom, indexFrom, lineFrom, indexFrom + str.length());
 
     QsciScintilla::endUndoAction();
+}
+
+void toMarkedText::clear(void)
+{
+    Filename = "";
+    fsWatcherClear();
+    redoEnabled(false);
+    undoEnabled(false);
+    setEdit();
+    QsciScintilla::clear();
+    setModified(false);
 }
 
 #if 0

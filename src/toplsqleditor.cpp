@@ -60,6 +60,7 @@
 #include "toresultview.h"
 #include "toplsqltext.h"
 #include "tocodemodel.h"
+#include "todescribe.h"
 
 #include "icons/close.xpm"
 #include "icons/compile.xpm"
@@ -69,6 +70,7 @@
 #include "icons/nextbug.xpm"
 #include "icons/prevbug.xpm"
 #include "icons/checkcode.xpm"
+#include "icons/describe.xpm"
 
 
 class toPLSQLEditorTool : public toTool
@@ -222,6 +224,7 @@ toPLSQLEditor::toPLSQLEditor(QWidget *main, toConnection &connection)
 
     toolbar->addAction(nextErrorAct);
     toolbar->addAction(previousErrorAct);
+    toolbar->addAction(describeAct);
 
     toolbar->addWidget(new toSpacer());
 
@@ -245,6 +248,11 @@ toPLSQLEditor::toPLSQLEditor(QWidget *main, toConnection &connection)
     splitter->addWidget(Objects);
 
     Editors = new QTabWidget(this);
+#if QT_VERSION >= 0x040500
+    Editors->setTabsClosable(true);
+    connect(Editors, SIGNAL(tabCloseRequested(int)),
+            this, SLOT(closeEditor(int)));
+#endif
     splitter->addWidget(Editors);
     Editors->setTabPosition(QTabWidget::North);
 
@@ -289,6 +297,12 @@ void toPLSQLEditor::createActions(void)
             SLOT(refresh()),
             Qt::QueuedConnection);
     refreshAct->setShortcut(QKeySequence::Refresh);
+    
+    describeAct = new QAction(QPixmap(const_cast<const char**>(describe_xpm)),
+                              tr("Describe under cursor"),
+                              this);
+    describeAct->setShortcut(Qt::Key_F4);
+    connect(describeAct, SIGNAL(triggered()), this, SLOT(describe(void)));
 
     newSheetAct = new QAction(QIcon(QPixmap(const_cast<const char**>(toworksheet_xpm))),
                               tr("&New Sheet"),
@@ -478,7 +492,7 @@ void toPLSQLEditor::changePackage(const QModelIndex &current, const QModelIndex 
 
         viewSource(Schema->currentText(), item->display(), ctype, 0);
         if (ctype == "PACKAGE" ||
-                (ctype == "TYPE" && hasCode(Schema->currentText(), item->display(), ctype + " BODY")))
+                (ctype == "TYPE" && hasCode(Schema->currentText(), ctype + " BODY", item->display())))
             viewSource(Schema->currentText(), item->display(), ctype + " BODY", 0);
     }
 #ifdef AUTOEXPAND
@@ -546,6 +560,7 @@ void toPLSQLEditor::windowActivated(QMdiSubWindow *widget)
             ToolMenu = new QMenu(tr("&PL/SQL Editor"), this);
 
             ToolMenu->addAction(refreshAct);
+            ToolMenu->addAction(describeAct);
 
             ToolMenu->addSeparator();
 
@@ -576,6 +591,13 @@ void toPLSQLEditor::closeEditor()
     closeEditor(editor);
 }
 
+void toPLSQLEditor::closeEditor(int ix)
+{
+    toPLSQLWidget * w = qobject_cast<toPLSQLWidget*>(Editors->widget(ix));
+    assert(w);
+    closeEditor(w);
+}
+
 void toPLSQLEditor::closeAllEditor()
 {
     int editorCount = Editors->count();
@@ -604,6 +626,17 @@ void toPLSQLEditor::closeEditor(toPLSQLWidget* &editor)
         if (Editors->count() == 0)
             newSheet();
     }
+}
+
+void toPLSQLEditor::describe()
+{
+    QString owner, table;
+    toHighlightedText * marked = currentEditor()->editor();
+    marked->tableAtCursor(owner, table);
+    if (owner.isNull())
+        owner = Schema->currentText();
+    toDescribe * d = new toDescribe(this);
+    d->changeParams(owner, table);
 }
 
 /* Purpose: should find and return object containing another part of package.
@@ -721,3 +754,4 @@ void toPLSQLEditor::checkCode(void)
     currentEditor()->applyResult("STATIC", Observations);
     currentEditor()->resizeResults();
 } // checkCode
+

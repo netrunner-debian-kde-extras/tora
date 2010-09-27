@@ -220,6 +220,7 @@ toQuery::toQuery(toConnection &conn,
         SQL(sql(*Connection).toAscii())
 {
     Mode = Normal;
+    showBusy = true;
     int numArgs;
     if (!arg9.isNull())
         numArgs = 9;
@@ -295,6 +296,7 @@ toQuery::toQuery(toConnection &conn,
         SQL(sql)
 {
     Mode = Normal;
+    showBusy = true;
     int numArgs;
     if (!arg9.isNull())
         numArgs = 9;
@@ -361,6 +363,7 @@ toQuery::toQuery(toConnection &conn, const toSQL &sql, const toQList &params)
         SQL(sql(conn).toAscii())
 {
     Mode = Normal;
+    showBusy = true;
     toBusy busy;
     try
     {
@@ -390,6 +393,7 @@ toQuery::toQuery(toConnection &conn,
         SQL(sql)
 {
     Mode = Test;
+    showBusy = true;
     toBusy busy;
     try
     {
@@ -414,6 +418,7 @@ toQuery::toQuery(toConnection &conn, const QString &sql, const toQList &params)
         SQL(sql)
 {
     Mode = Normal;
+    showBusy = true;
     toBusy busy;
     try
     {
@@ -441,6 +446,7 @@ toQuery::toQuery(toConnection &conn,
         SQL(sql(conn).toAscii())
 {
     Mode = mode;
+    showBusy = true;
 
     ConnectionSub = conn.pooledConnection();
 
@@ -471,6 +477,7 @@ toQuery::toQuery(toConnection &conn,
         SQL(sql)
 {
     Mode = mode;
+    showBusy = true;
 
     ConnectionSub = conn.pooledConnection();
 
@@ -496,6 +503,7 @@ toQuery::toQuery(toConnection &conn, queryMode mode)
         : Connection(QPointer<toConnection>(&conn))
 {
     Mode = mode;
+    showBusy = true;
 
     ConnectionSub = conn.pooledConnection();
 
@@ -598,7 +606,7 @@ toQList toQuery::readQuery(toConnection &conn, const QString &sql, toQList &para
 
 toQList toQuery::readQuery(const QString &sql, toQList &params)
 {
-    toBusy busy;
+    toBusy busy(showBusy);
     SQL = sql;
     Params = params;
     Query->execute();
@@ -1305,31 +1313,34 @@ bool toConnection::loadDiskCache()
     /** build cache lists
      */
 
-    QStringList records = data.split("\x1D", QString::KeepEmptyParts);
-    for (QStringList::Iterator i = records.begin(); i != records.end(); i++)
+    if(!data.isEmpty())
     {
-        objCounter++;
-        QStringList record = (*i).split("\x1E", QString::KeepEmptyParts);
-        QStringList::Iterator rec = record.begin();
-        cur = new objectName;
-        (*cur).Owner = (*rec);
-        rec++;
-        (*cur).Name = (*rec);
-        rec++;
-        (*cur).Type = (*rec);
-        rec++;
-        (*cur).Comment = (*rec);
-        rec++;
-        QStringList slist = (*rec).split("\x1F", QString::SkipEmptyParts);
-        for (QStringList::Iterator s = slist.begin(); s != slist.end(); s++)
+        QStringList records = data.split("\x1D", QString::KeepEmptyParts);
+        for (QStringList::Iterator i = records.begin(); i != records.end(); i++)
         {
-            SynonymMap[(*s)] = (*cur);
-            (*cur).Synonyms.insert((*cur).Synonyms.end(), (*s));
-            synCounter++;
+            objCounter++;
+            QStringList record = (*i).split("\x1E", QString::KeepEmptyParts);
+            QStringList::Iterator rec = record.begin();
+            cur = new objectName;
+            (*cur).Owner = (*rec);
+            rec++;
+            (*cur).Name = (*rec);
+            rec++;
+            (*cur).Type = (*rec);
+            rec++;
+            (*cur).Comment = (*rec);
+            rec++;
+            QStringList slist = (*rec).split("\x1F", QString::SkipEmptyParts);
+            for (QStringList::Iterator s = slist.begin(); s != slist.end(); s++)
+            {
+                SynonymMap[(*s)] = (*cur);
+                (*cur).Synonyms.insert((*cur).Synonyms.end(), (*s));
+                synCounter++;
+            }
+            ObjectNames.insert(ObjectNames.end(), (*cur));
+            delete cur;
+            cur = 0;
         }
-        ObjectNames.insert(ObjectNames.end(), (*cur));
-        delete cur;
-        cur = 0;
     }
     return true;
 }
@@ -1684,6 +1695,18 @@ toQDescList &toConnection::columns(const objectName &object, bool nocache)
     }
 
     return ColumnCache[object];
+}
+std::list<toConnection::objectName> toConnection::tables(const objectName &object, bool nocache)
+{
+    std::list<objectName> ret;
+
+    Q_FOREACH(objectName obj, ObjectNames)
+    {
+        if(obj.Owner == object.Name)
+            ret.insert(ret.end(), obj);
+    }
+
+    return ret;
 }
 
 bool toConnection::objectName::operator < (const objectName &nam) const

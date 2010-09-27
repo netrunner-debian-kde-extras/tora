@@ -66,6 +66,7 @@
 
 class QMenu;
 class QsciPrinter;
+class QFileSystemWatcher;
 
 
 /**
@@ -97,11 +98,19 @@ class toMarkedText : public QsciScintilla, public toEditWidget
     QString m_searchText;
     //! Highligh all occurrences of m_searchText QScintilla indicator
     int m_searchIndicator;
+    
+    //! Original content of the editor for XML format functionality. See setXMLWrap()
+    QString m_origContent;
+
+    //! Watch for file (if any) changes from external apps
+    QFileSystemWatcher * m_fsWatcher;
 
     bool findText(Search::SearchDirection direction);
 
     void searchFound(int line, int col);
     void incrementalSearch(bool forward, bool next);
+    void fsWatcherClear();
+
 protected:
     /** Reimplemented for internal reasons.
      */
@@ -150,15 +159,7 @@ public:
 
     /** Erase the contents of the editor.
      */
-    virtual void clear(void)
-    {
-        Filename = "";
-        redoEnabled(false);
-        undoEnabled(false);
-        setEdit();
-        QsciScintilla::clear();
-        setModified(false);
-    }
+    virtual void clear(void);
 
     /** Get location of the current selection. This function is now public. See the
      * Qt documentation for more information.
@@ -247,7 +248,7 @@ public:
      * @param col Will be filled out with the col.
      */
     void findPosition(int index, int &line, int &col);
-
+    
 signals:
     void displayMenu(QMenu *);
     // emitted when a new file is opened
@@ -274,6 +275,8 @@ private slots:
     void setCopyAvailable(bool yes);
     //! \brief Handle line numbers in the editor on text change
     void linesChanged();
+    //! \brief Handle file external changes (3rd party modifications)
+    void m_fsWatcher_fileChanged(const QString & filename);
 
 public slots:
     /**
@@ -338,6 +341,15 @@ public slots:
     }
 
     void setWordWrap(bool);
+
+    /*! \brief Tries to format XML content of the editor.
+    It's using "brute force" = expecting it's a xml string. If the QDomDocument fails
+    with parsing, nothing is changed.
+    The original content of the editor is stored in QString m_origContent. This attribute
+    is cleared if it's not needed
+    \param wrap true for use formatting, false for use original text
+    */
+    void setXMLWrap(bool wrap);
 };
 
 #endif

@@ -55,6 +55,7 @@
 #include <QMenu>
 #include <QAction>
 
+// Constant values are taken from Oracle DBMS_DEBUG package.
 #define TO_SUCCESS  0
 #define TO_NO_SUCH_BREAKPOINT 13
 #define TO_ERROR_NO_DEBUG_INFO  2
@@ -135,7 +136,7 @@ class toDebug : public toToolWidget
     // Get text version from error/return/reason code returned by DBMS_DEBUG routines
     // Currently only used for debug information
     // type: 1 - error, 2 - reason, 3 - continue
-    QString getErrorText(int code, int type);
+    void getErrorText(int code, int type, QString &ret);
 #endif
 
     QComboBox *Schema;
@@ -181,14 +182,15 @@ class toDebug : public toToolWidget
     QTabWidget *Editors;
 
     // Must hold lock before reading or writing to these
-    toLock       Lock;
-    toSemaphore  TargetSemaphore;
-    toSemaphore  ChildSemaphore;
-    toSemaphore  StartedSemaphore;
+    toLock       Lock; // Lock of main session used to synchronise access to different items from main/target
+    toSemaphore  TargetSemaphore; // This semaphore is down when target is waiting
+    toSemaphore  ChildSemaphore; // This semaphore is down when main debug session is waiting
     toThread    *TargetThread;
-    QString      TargetSQL;
-    QString      TargetLog; // accumulates strings (logs) of debugger actions
-    QString      TargetException; // accumulates errors (exceptions) occuring in target session
+    toQuery      *TargetQuery; // Session running target, used in main thread to cancel target
+    QString      TargetSQL; // Variable used to pass on SQL which has to be executed in target session
+    bool         DebugTarget; // Does target session has to go into debug mode before executing statement?
+    QString      TargetLog; // Accumulates strings (logs) of debugger actions
+    QString      TargetException; // Accumulates errors (exceptions) occuring in target session
     toQList      InputData;
     toQList      OutputData;
     bool         RunningTarget; // Indicates if target session is currently running.
@@ -197,7 +199,17 @@ class toDebug : public toToolWidget
     // Can be read after thread startup
     QString      TargetID; // oracle debug id of "target session"
     // End of lock stuff
-    toTimer      StartTimer;
+    // TS 2010-07-08 Timer was used to initialise target session some time after launching
+    // debugger tool. From now on target session is only initialised when actually needed.
+    //toTimer      StartTimer;
+
+    // set to true when stopping after user pressed button "stop" (or have chosen
+    // to compile while running, which means debugger will stop and then compile)
+    bool manualStopping;
+    // This bool is used as a workaround for a problem when toConnection::closeWidgets
+    // is calling close() twice. This variable would make it possible to skip closing
+    // actions when called for the second time (TODO: should be fixed properly in toconnection.cpp)
+    bool closedAlready;
 
     class targetTask : public toTask
     {
@@ -275,7 +287,9 @@ public:
     // all calls of DBMS_DEBUG should be done from this session as
     // this specific session has target session attached.
 
-    void executeInTarget(const QString &, toQList &params);
+    // TS 2010-07-10 These functions are not used anymore
+    //void executeInTarget(const QString &, toQList &params);
+    //void executeInTargetNoDebug(const QString &);
 
     QString checkWatch(const QString &name);
 
@@ -322,6 +336,7 @@ public slots:
     void changeWatch(void);
     void changeWatch(toTreeWidgetItem *item);
     void closeEditor(void);
+    void closeEditor(int);
     void closeAllEditor(void);
 };
 

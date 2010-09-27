@@ -55,7 +55,7 @@ class toConnection;
 
 /**
  * This class handles an abstraction of SQL statements used by TOra to extract
- * information and manipulate data. This is usefull in two ways, first off you
+ * information and manipulate data. This is useful in two ways, first off you
  * can edit the strings using a handy editor inside TOra if you find bugs. Also
  * you can use different statements for different Oracle versions. You can also
  * add support for new versions of Oracle without any need for recompilation or
@@ -68,6 +68,11 @@ class toConnection;
  * To determine which SQL to use the statement with the highest
  * version not above the current connection is used. If no statements below or
  * equal to the current version is available the lowest available is used.
+ *
+ * Versions are compared as strings to a version string returned by database
+ * such as "1102000100". Therefore version of SQL should be specified in a
+ * similar format (usually skipping a "patch" part). For example: 0801, 0902
+ * or 1102.
  *
  * All strings are specific for a given database provider. No attempt to use
  * strings from other providers will be made.
