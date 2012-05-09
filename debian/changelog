@@ -2,8 +2,11 @@ tora (2.1.3-2) unstable; urgency=low
 
   * Fix FTBFS with gcc 4.7 by fixing missing <unistd.h> includes.
     Thanks to Cyril Brulebois <kibi@debian.org> (Closes: #667395)
+  * Bumped Standards-Version to 3.9.3, no changes needed.
+  * Removed leading article in package description
+  * Moved debug package to priority extra.
 
- -- Michael Meskes <meskes@debian.org>  Wed, 09 May 2012 09:49:57 +0200
+ -- Michael Meskes <meskes@debian.org>  Wed, 09 May 2012 10:53:50 +0200
 
 tora (2.1.3-1) unstable; urgency=low
 

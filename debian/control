@@ -20,6 +20,7 @@ Description: graphical toolkit for database developers and administrators
 
 Package: tora-dbg
 Section: debug
+Priority: extra
 Architecture: any
 Depends: ${misc:Depends}, tora
 Description: graphical toolkit for database developers and administrators - debugging symbols
