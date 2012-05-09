@@ -46,6 +46,7 @@
 #include "toextract.h"
 
 #include <stdio.h>
+#include <unistd.h>
 
 #include <qapplication.h>
 #include <qlabel.h>

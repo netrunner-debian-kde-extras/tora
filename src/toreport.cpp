@@ -53,6 +53,8 @@
 #include <winsock2.h>
 #endif
 
+#include <unistd.h>
+
 
 static bool SameContext(const QString &str, const QString &str2)
 {
